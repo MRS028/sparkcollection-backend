@@ -81,10 +81,13 @@ class UserRepository {
   }
 
   /**
-   * Soft delete user (set status to inactive)
+   * Soft delete user (set isDeleted to true and isActive to false)
    */
   async softDelete(id: string | Types.ObjectId): Promise<IUser | null> {
-    return this.updateById(id, { status: UserStatus.INACTIVE });
+    return this.updateById(id, {
+      isDeleted: true,
+      isActive: UserStatus.INACTIVE,
+    });
   }
 
   /**

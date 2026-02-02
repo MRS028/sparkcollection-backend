@@ -4,13 +4,14 @@
  */
 
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../../shared/types/index.js";
+import { AuthRequest, UserStatus } from "../../../shared/types/index.js";
 import { userService } from "../services/user.service.js";
 import {
   sendSuccess,
   sendCreated,
   sendNoContent,
   sendPaginated,
+  sendText,
 } from "../../../shared/utils/apiResponse.js";
 import { asyncHandler } from "../../../shared/utils/asyncHandler.js";
 import {
@@ -22,6 +23,7 @@ import {
   UpdateStatusInput,
 } from "../validators/user.validator.js";
 import { setAuthCookie, clearAuthCookies } from "../cookies/setCookies.js";
+import { NotFoundError } from "@/shared/errors/index.js";
 
 /**
  * @route   POST /api/v1/users
@@ -148,16 +150,54 @@ export const updateUserStatus = asyncHandler(
 );
 
 /**
- * @route   DELETE /api/v1/users/:id
- * @desc    Delete user (soft delete)
+ * @route   DELETE /api/v1/users/delete/:id
+ * @desc    Soft delete user (sets isDeleted to true)
  * @access  Admin
  */
 export const deleteUser = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const { id } = req.params;
-    await userService.delete(id);
 
-    sendNoContent(res);
+    // Verify user exists before deleting
+    const user = await userService.getById(id);
+    // console.log("Deleting user:", );
+    if (user.isDeleted === true) {
+      return sendText(res,null, { message: "User already deleted." });
+    }
+
+    // Soft delete - set isDeleted to true
+    await userService.delete(id);
+    
+    sendSuccess(res, null, {
+      message: "User deleted successfully",
+    });
+  },
+);
+
+/**
+ * @route   PATCH /api/v1/users/:id/ban
+ * @desc    Ban user (sets status to BLOCKED)
+ * @access  Admin
+ */
+export const banUser = asyncHandler(
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
+    const { id } = req.params;
+
+    // Verify user exists before banning
+    const user = await userService.getById(id);
+    if (
+      !user ||
+      user.status === UserStatus.BLOCKED
+    ) {
+      throw new NotFoundError("User");
+    }
+
+    // Ban user - set status to BLOCKED
+    await userService.updateStatus(id, UserStatus.BLOCKED);
+
+    sendSuccess(res, null, {
+      message: "User has been banned successfully",
+    });
   },
 );
 

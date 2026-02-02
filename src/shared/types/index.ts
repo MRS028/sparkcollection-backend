@@ -44,6 +44,8 @@ export interface IUser extends Document {
   avatar?: string;
   emailVerified: boolean;
   phoneVerified: boolean;
+  isDeleted?: boolean;
+  isActive?: UserStatus;
   lastLogin?: Date;
   tenantId?: string;
   createdAt: Date;

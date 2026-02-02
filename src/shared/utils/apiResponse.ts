@@ -143,6 +143,37 @@ export const sendError = (
   return res.status(statusCode).json(response);
 };
 
+export const sendText = <T>(
+  res: Response,
+  data: T,
+  options?: {
+    message?: string;
+    statusCode?: number;
+    meta?: {
+      pagination?: PaginationMeta;
+      [key: string]: unknown;
+    };
+  },
+): Response => {
+  const { message, statusCode = 201, meta } = options || {};
+
+  const response: ApiSuccessResponse<T> = {
+    success: true,
+    data,
+    message
+  };
+
+  if (message) {
+    response.message = message;
+  }
+
+  if (meta) {
+    response.meta = meta;
+  }
+
+  return res.status(statusCode).json(response);
+};
+
 /**
  * Helper to calculate pagination offset
  */

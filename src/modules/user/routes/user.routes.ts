@@ -81,8 +81,15 @@ router.patch(
   userController.updateUserStatus,
 );
 
+router.patch(
+  "/:id/ban",
+  adminOnly,
+  validateParams(userIdParamsSchema),
+  userController.banUser,
+);
+
 router.delete(
-  "/:id",
+  "/delete/:id",
   adminOnly,
   validateParams(userIdParamsSchema),
   userController.deleteUser,
