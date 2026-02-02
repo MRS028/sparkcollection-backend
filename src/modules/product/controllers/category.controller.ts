@@ -4,7 +4,7 @@
 
 import { Response, NextFunction } from "express";
 import { AuthRequest } from "../../../shared/types/index.js";
-import { categoryService } from "../services/category.service.js";
+import { categoryService } from "../services/category.service";
 import { sendSuccess, sendCreated } from "../../../shared/utils/apiResponse.js";
 import { asyncHandler } from "../../../shared/utils/asyncHandler.js";
 

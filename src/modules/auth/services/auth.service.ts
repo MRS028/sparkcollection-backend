@@ -22,6 +22,7 @@ import {
 import { redis } from "../../../config/redis.js";
 import { logger } from "../../../shared/utils/logger.js";
 import { config } from "../../../config/index.js";
+import { emailService } from "../../../shared/services/email.service.js";
 
 export interface RegisterInput {
   email: string;
@@ -227,9 +228,13 @@ class AuthService {
   }
 
   /**
-   * Logout user (revoke refresh token)
+   * Logout user (revoke refresh token and blacklist access token)
    */
-  public async logout(refreshToken: string, ipAddress: string): Promise<void> {
+  public async logout(
+    refreshToken: string,
+    ipAddress: string,
+    accessToken?: string,
+  ): Promise<void> {
     const storedToken = await RefreshToken.findOne({ token: refreshToken });
 
     if (storedToken && storedToken.isActive) {
@@ -241,7 +246,31 @@ class AuthService {
       await this.invalidateUserCache(storedToken.userId.toString());
     }
 
+    // Blacklist the access token if provided
+    if (accessToken) {
+      await this.blacklistAccessToken(accessToken);
+    }
+
     logger.info("User logged out");
+  }
+
+  /**
+   * Blacklist an access token in Redis
+   */
+  private async blacklistAccessToken(token: string): Promise<void> {
+    try {
+      const decoded = jwtService.verifyAccessToken(token);
+      const expiresIn = decoded.exp! - Math.floor(Date.now() / 1000);
+
+      if (expiresIn > 0) {
+        // Store token in blacklist until it naturally expires
+        await redis.set(`blacklist:${token}`, "1", expiresIn);
+        logger.info(`Access token blacklisted for user: ${decoded.userId}`);
+      }
+    } catch (error) {
+      // Token is already invalid, no need to blacklist
+      logger.debug("Token already invalid, skipping blacklist");
+    }
   }
 
   /**
@@ -251,6 +280,14 @@ class AuthService {
     await this.revokeAllUserTokens(new Types.ObjectId(userId), ipAddress);
     await this.invalidateUserCache(userId);
     logger.info(`User logged out from all devices: ${userId}`);
+  }
+
+  /**
+   * Check if access token is blacklisted
+   */
+  public async isTokenBlacklisted(token: string): Promise<boolean> {
+    const blacklisted = await redis.get(`blacklist:${token}`);
+    return blacklisted !== null;
   }
 
   /**
@@ -278,11 +315,12 @@ class AuthService {
   /**
    * Request password reset
    */
-  public async requestPasswordReset(email: string): Promise<string> {
+  public async requestPasswordReset(email: string): Promise<void> {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      // Don't reveal if user exists
-      return "If the email exists, a reset link will be sent";
+      // Don't reveal if user exists - still return success
+      logger.info(`Password reset requested for non-existent email: ${email}`);
+      return;
     }
 
     // Generate reset token
@@ -291,10 +329,18 @@ class AuthService {
     // Store in Redis with 1 hour expiry
     await redis.set(`password_reset:${resetToken}`, user._id.toString(), 3600);
 
-    // TODO: Send email with reset link
-    logger.info(`Password reset requested for: ${email}`);
-
-    return resetToken; // In production, don't return this - send via email
+    // Send password reset email
+    try {
+      await emailService.sendPasswordResetEmail(
+        user.email,
+        resetToken,
+        user.firstName || "User",
+      );
+      logger.info(`Password reset email sent to: ${email}`);
+    } catch (error) {
+      logger.error(`Failed to send password reset email to ${email}:`, error);
+      // Don't throw error to prevent user enumeration
+    }
   }
 
   /**

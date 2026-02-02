@@ -337,7 +337,7 @@ class ProductService {
     } = options;
     const skip = (page - 1) * limit;
 
-    const query = this.buildFilterQuery(filters);
+    const query = await this.buildFilterQuery(filters);
 
     const sort: Record<string, 1 | -1> = {
       [sortBy]: sortOrder === "asc" ? 1 : -1,
@@ -380,7 +380,7 @@ class ProductService {
     const skip = (page - 1) * limit;
 
     const query: FilterQuery<IProduct> = {
-      ...this.buildFilterQuery(filters),
+      ...(await this.buildFilterQuery(filters)),
       $text: { $search: searchTerm },
     };
 
@@ -614,7 +614,9 @@ class ProductService {
 
   // Private helper methods
 
-  private buildFilterQuery(filters: ProductFilters): FilterQuery<IProduct> {
+  private async buildFilterQuery(
+    filters: ProductFilters,
+  ): Promise<FilterQuery<IProduct>> {
     const query: FilterQuery<IProduct> = {};
 
     if (filters.status) {
@@ -623,12 +625,38 @@ class ProductService {
       query.status = ProductStatus.ACTIVE;
     }
 
+    // Handle category - can be ObjectId or name
     if (filters.category) {
-      query.category = new Types.ObjectId(filters.category);
+      if (Types.ObjectId.isValid(filters.category)) {
+        query.category = new Types.ObjectId(filters.category);
+      } else {
+        // Lookup by name
+        const category = await Category.findOne({
+          name: { $regex: new RegExp(`^${filters.category}$`, "i") },
+          tenantId: filters.tenantId,
+        });
+        if (category) {
+          query.category = category._id;
+        } else {
+          // No matching category - return no results
+          query._id = new Types.ObjectId("000000000000000000000000");
+        }
+      }
     }
 
+    // Handle subcategory - can be ObjectId or name
     if (filters.subcategory) {
-      query.subcategory = new Types.ObjectId(filters.subcategory);
+      if (Types.ObjectId.isValid(filters.subcategory)) {
+        query.subcategory = new Types.ObjectId(filters.subcategory);
+      } else {
+        const subcategory = await Category.findOne({
+          name: { $regex: new RegExp(`^${filters.subcategory}$`, "i") },
+          tenantId: filters.tenantId,
+        });
+        if (subcategory) {
+          query.subcategory = subcategory._id;
+        }
+      }
     }
 
     if (filters.brand) {

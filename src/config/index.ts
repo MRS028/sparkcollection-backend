@@ -55,11 +55,12 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional(),
 
   // Email
-  SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.string().transform(Number).optional(),
+  SMTP_HOST: z.string().default("smtp.gmail.com"),
+  SMTP_PORT: z.string().transform(Number).default("587"),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  EMAIL_FROM: z.string().optional(),
+  EMAIL_FROM: z.string().default("noreply@sparkcollection.com"),
+  EMAIL_FROM_NAME: z.string().default("Spark Collection"),
 
   // OpenAI
   OPENAI_API_KEY: z.string().optional(),
@@ -151,8 +152,9 @@ export const config = {
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     user: env.SMTP_USER,
-    pass: env.SMTP_PASS,
+    password: env.SMTP_PASS,
     from: env.EMAIL_FROM,
+    fromName: env.EMAIL_FROM_NAME,
   },
   openai: {
     apiKey: env.OPENAI_API_KEY,
@@ -173,6 +175,7 @@ export const config = {
     url: env.FRONTEND_URL,
     adminUrl: env.ADMIN_FRONTEND_URL,
   },
+  frontendUrl: env.FRONTEND_URL, // Shorthand for email service
   logging: {
     level: env.LOG_LEVEL,
     filePath: env.LOG_FILE_PATH,

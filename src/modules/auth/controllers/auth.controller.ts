@@ -7,6 +7,7 @@ import { Response, NextFunction } from "express";
 // import { Role } from "@prisma/client";
 import { AuthRequest, Role } from "../../../shared/types/index.js";
 import { authService } from "../services/auth.service.js";
+import { jwtService } from "../services/jwt.service.js";
 import {
   sendSuccess,
   sendCreated,
@@ -163,14 +164,18 @@ export const logout = asyncHandler(
     const token = req.cookies?.refreshToken || req.body.refreshToken;
     const ipAddress = getClientIp(req);
 
+    // Get access token to blacklist it
+    const accessToken =
+      jwtService.extractTokenFromHeader(req.headers.authorization) || undefined;
+
     if (token) {
-      await authService.logout(token, ipAddress);
+      await authService.logout(token, ipAddress, accessToken);
     }
 
     // Clear refresh token cookie
     clearRefreshTokenCookie(res);
 
-    sendNoContent(res);
+    sendSuccess(res, null, { message: "Logged out successfully" });
   },
 );
 

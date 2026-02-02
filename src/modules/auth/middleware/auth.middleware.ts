@@ -33,6 +33,12 @@ export const authenticate = async (
     // Verify token
     const decoded = jwtService.verifyAccessToken(token);
 
+    // Check if token is blacklisted (logged out)
+    const isBlacklisted = await authService.isTokenBlacklisted(token);
+    if (isBlacklisted) {
+      throw new UnauthorizedError("Token has been revoked");
+    }
+
     // Verify user still exists and is active
     const user = await authService.getUserById(decoded.userId);
     if (!user) {

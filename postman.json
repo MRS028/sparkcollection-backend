@@ -300,6 +300,20 @@
         },
         {
           "name": "Forgot Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ ' + response.message);",
+                  "    console.log('📧 Check your email inbox for the password reset link');",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -320,11 +334,26 @@
               "host": ["{{apiV1}}"],
               "path": ["auth", "forgot-password"]
             },
-            "description": "Request password reset (sends reset token)"
+            "description": "Request password reset - sends email with reset link (valid for 1 hour). For security, always returns success message even if email doesn't exist."
           }
         },
         {
           "name": "Reset Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ ' + response.message);",
+                  "    console.log('🔐 All existing sessions have been logged out');",
+                  "    console.log('➡️ Please login with your new password');",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -338,14 +367,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resetToken\": \"reset-token-from-email-or-response\",\n  \"newPassword\": \"NewPassword@123\"\n}"
+              "raw": "{\n  \"token\": \"paste-token-from-email-here\",\n  \"password\": \"NewPassword@123\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/auth/reset-password",
               "host": ["{{apiV1}}"],
               "path": ["auth", "reset-password"]
             },
-            "description": "Reset password using reset token"
+            "description": "Reset password using token from email. Token expires in 1 hour. All existing sessions are logged out after successful reset."
           }
         },
         {
@@ -378,9 +407,10 @@
               "script": {
                 "exec": [
                   "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
                   "    pm.collectionVariables.set('accessToken', '');",
                   "    pm.collectionVariables.set('refreshToken', '');",
-                  "    console.log('✅ Logged out - tokens cleared');",
+                  "    console.log('✅ ' + response.message);",
                   "}"
                 ]
               }
@@ -403,7 +433,7 @@
               "host": ["{{apiV1}}"],
               "path": ["auth", "logout"]
             },
-            "description": "Logout from current device"
+            "description": "Logout from current device - invalidates both access and refresh tokens"
           }
         },
         {
