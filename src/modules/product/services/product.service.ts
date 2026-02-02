@@ -43,6 +43,29 @@ export interface ProductFilters {
   tenantId?: string;
 }
 
+// Input variant type with Record instead of Map for API compatibility
+export interface VariantInput {
+  _id?: string;
+  sku: string;
+  name: string;
+  price: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+  stock: number;
+  lowStockThreshold: number;
+  attributes?: Record<string, string>; // Accept Record from API, Mongoose converts to Map
+  images?: string[];
+  weight?: number;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+    unit: "cm" | "in";
+  };
+  isDefault: boolean;
+  isActive: boolean;
+}
+
 export interface CreateProductInput {
   name: string;
   description: string;
@@ -55,7 +78,7 @@ export interface CreateProductInput {
   subcategory?: string;
   brand?: string;
   tags?: string[];
-  variants?: Partial<IProductVariant>[];
+  variants?: Partial<VariantInput>[];
   attributes?: Record<string, string[]>;
   weight?: number;
   dimensions?: {
@@ -366,7 +389,7 @@ class ProductService {
    */
   async addVariant(
     productId: string,
-    variant: Partial<IProductVariant>,
+    variant: Partial<VariantInput>,
     userId: string,
   ): Promise<IProduct> {
     const product = await Product.findById(productId);
@@ -389,7 +412,7 @@ class ProductService {
     product.variants.push({
       ...variant,
       sku: variant.sku!.toUpperCase(),
-    } as IProductVariant);
+    } as unknown as IProductVariant);
 
     await product.save();
     await this.invalidateCache(productId, product.slug);
@@ -403,7 +426,7 @@ class ProductService {
   async updateVariant(
     productId: string,
     variantId: string,
-    update: Partial<IProductVariant>,
+    update: Partial<VariantInput>,
     userId: string,
   ): Promise<IProduct> {
     const product = await Product.findById(productId);

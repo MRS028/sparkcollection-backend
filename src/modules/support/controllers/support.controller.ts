@@ -22,7 +22,7 @@ export class SupportController {
    */
   createTicket = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { subject, description, category, priority, orderId, tags } =
         req.body;
 
@@ -36,7 +36,7 @@ export class SupportController {
         tags,
       });
 
-      sendSuccess(res, ticket, "Ticket created", 201);
+      sendSuccess(res, ticket, { message: "Ticket created", statusCode: 201 });
     },
   );
 
@@ -47,12 +47,12 @@ export class SupportController {
   getTicketById = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { ticketId } = req.params;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const role = req.user!.role as UserRole;
 
       const ticket = await supportTicketService.getById(ticketId, userId, role);
 
-      sendSuccess(res, ticket, "Ticket retrieved");
+      sendSuccess(res, ticket, { message: "Ticket retrieved" });
     },
   );
 
@@ -66,7 +66,7 @@ export class SupportController {
 
       const ticket = await supportTicketService.getByTicketNumber(ticketNumber);
 
-      sendSuccess(res, ticket, "Ticket retrieved");
+      sendSuccess(res, ticket, { message: "Ticket retrieved" });
     },
   );
 
@@ -76,7 +76,7 @@ export class SupportController {
    */
   getUserTickets = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { page, limit, sortBy, sortOrder } = req.query;
 
       const result = await supportTicketService.getUserTickets(userId, {
@@ -134,7 +134,7 @@ export class SupportController {
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { ticketId } = req.params;
       const { content, isInternal, attachments } = req.body;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const role = req.user!.role as UserRole;
 
       const senderType = [UserRole.ADMIN, UserRole.SUPPORT_AGENT].includes(role)
@@ -150,7 +150,7 @@ export class SupportController {
         attachments,
       );
 
-      sendSuccess(res, ticket, "Message added");
+      sendSuccess(res, ticket, { message: "Message added" });
     },
   );
 
@@ -169,7 +169,7 @@ export class SupportController {
         resolution,
       );
 
-      sendSuccess(res, ticket, "Status updated");
+      sendSuccess(res, ticket, { message: "Status updated" });
     },
   );
 
@@ -184,7 +184,7 @@ export class SupportController {
 
       const ticket = await supportTicketService.assignTicket(ticketId, agentId);
 
-      sendSuccess(res, ticket, "Ticket assigned");
+      sendSuccess(res, ticket, { message: "Ticket assigned" });
     },
   );
 
@@ -202,7 +202,7 @@ export class SupportController {
         priority,
       );
 
-      sendSuccess(res, ticket, "Priority updated");
+      sendSuccess(res, ticket, { message: "Priority updated" });
     },
   );
 
@@ -213,13 +213,13 @@ export class SupportController {
   getStatistics = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const role = req.user!.role as UserRole;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       const agentId = role === UserRole.SUPPORT_AGENT ? userId : undefined;
 
       const stats = await supportTicketService.getStatistics(agentId);
 
-      sendSuccess(res, stats, "Statistics retrieved");
+      sendSuccess(res, stats, { message: "Statistics retrieved" });
     },
   );
 
@@ -231,7 +231,7 @@ export class SupportController {
    */
   chat = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const { sessionId, message, context } = req.body;
       const userAgent = req.headers["user-agent"];
       const ip = req.ip;
@@ -248,7 +248,7 @@ export class SupportController {
         },
       });
 
-      sendSuccess(res, response, "Message processed");
+      sendSuccess(res, response, { message: "Message processed" });
     },
   );
 
@@ -262,7 +262,7 @@ export class SupportController {
 
       const session = await aiSupportService.getChatHistory(sessionId);
 
-      sendSuccess(res, session, "Chat history retrieved");
+      sendSuccess(res, session, { message: "Chat history retrieved" });
     },
   );
 
@@ -276,7 +276,7 @@ export class SupportController {
 
       await aiSupportService.closeSession(sessionId);
 
-      sendSuccess(res, null, "Chat session closed");
+      sendSuccess(res, null, { message: "Chat session closed" });
     },
   );
 }

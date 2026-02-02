@@ -22,11 +22,14 @@ export class PaymentController {
         orderId,
         currency,
         metadata: {
-          userId: req.user!.id,
+          userId: req.user!.userId,
         },
       });
 
-      sendSuccess(res, result, "Payment intent created", 201);
+      sendSuccess(res, result, {
+        message: "Payment intent created",
+        statusCode: 201,
+      });
     },
   );
 
@@ -40,7 +43,7 @@ export class PaymentController {
 
       const order = await paymentService.confirmPayment(paymentIntentId);
 
-      sendSuccess(res, order, "Payment confirmed");
+      sendSuccess(res, order, { message: "Payment confirmed" });
     },
   );
 
@@ -59,7 +62,7 @@ export class PaymentController {
         reason,
       });
 
-      sendSuccess(res, order, "Refund processed");
+      sendSuccess(res, order, { message: "Refund processed" });
     },
   );
 
@@ -73,7 +76,7 @@ export class PaymentController {
 
       const result = await paymentService.getPaymentDetails(orderId);
 
-      sendSuccess(res, result, "Payment details retrieved");
+      sendSuccess(res, result, { message: "Payment details retrieved" });
     },
   );
 
@@ -86,7 +89,7 @@ export class PaymentController {
 
     const result = await paymentService.processWebhook(req.body, signature);
 
-    sendSuccess(res, result, "Webhook processed");
+    sendSuccess(res, result, { message: "Webhook processed" });
   });
 }
 

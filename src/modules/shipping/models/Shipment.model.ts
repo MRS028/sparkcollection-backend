@@ -86,6 +86,13 @@ export interface IShipment extends Document {
   tenantId: string;
   createdAt: Date;
   updatedAt: Date;
+  // Methods
+  addTrackingEvent(
+    status: ShipmentStatus,
+    description: string,
+    location?: string,
+    rawData?: Record<string, unknown>,
+  ): void;
 }
 
 // Tracking Event Schema

@@ -58,7 +58,7 @@ export interface IProduct extends Document {
   basePrice: number;
   compareAtPrice?: number;
   costPrice?: number;
-  category: Types.ObjectId;
+  category?: Types.ObjectId;
   subcategory?: Types.ObjectId;
   brand?: string;
   tags: string[];

@@ -93,7 +93,7 @@ export const addTrackingSchema = z.object({
 
 // Order filters
 export const orderFiltersSchema = z.object({
-  query: paginationSchema.shape.query.extend({
+  query: paginationSchema.extend({
     status: z.nativeEnum(OrderStatus).optional(),
     paymentStatus: z.nativeEnum(PaymentStatus).optional(),
     startDate: z.coerce.date().optional(),
@@ -104,12 +104,12 @@ export const orderFiltersSchema = z.object({
 
 // User orders
 export const userOrdersSchema = z.object({
-  query: paginationSchema.shape.query,
+  query: paginationSchema,
 });
 
 // Seller orders
 export const sellerOrdersSchema = z.object({
-  query: paginationSchema.shape.query.extend({
+  query: paginationSchema.extend({
     status: z.nativeEnum(OrderStatus).optional(),
   }),
 });

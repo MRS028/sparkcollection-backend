@@ -16,12 +16,12 @@ export class CartController {
    */
   getCart = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
 
       const cart = await cartService.getOrCreateCart(userId, sessionId);
 
-      sendSuccess(res, cart, "Cart retrieved successfully");
+      sendSuccess(res, cart, { message: "Cart retrieved successfully" });
     },
   );
 
@@ -31,7 +31,7 @@ export class CartController {
    */
   addItem = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
       const { productId, variantId, quantity } = req.body;
 
@@ -41,7 +41,10 @@ export class CartController {
         quantity,
       });
 
-      sendSuccess(res, cart, "Item added to cart", 201);
+      sendSuccess(res, cart, {
+        message: "Item added to cart",
+        statusCode: 201,
+      });
     },
   );
 
@@ -51,7 +54,7 @@ export class CartController {
    */
   updateItem = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
       const { itemId } = req.params;
       const { quantity } = req.body;
@@ -61,7 +64,7 @@ export class CartController {
         quantity,
       });
 
-      sendSuccess(res, cart, "Cart item updated");
+      sendSuccess(res, cart, { message: "Cart item updated" });
     },
   );
 
@@ -71,13 +74,13 @@ export class CartController {
    */
   removeItem = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
       const { itemId } = req.params;
 
       const cart = await cartService.removeItem(userId, sessionId, itemId);
 
-      sendSuccess(res, cart, "Item removed from cart");
+      sendSuccess(res, cart, { message: "Item removed from cart" });
     },
   );
 
@@ -87,12 +90,12 @@ export class CartController {
    */
   clearCart = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
 
       const cart = await cartService.clearCart(userId, sessionId);
 
-      sendSuccess(res, cart, "Cart cleared");
+      sendSuccess(res, cart, { message: "Cart cleared" });
     },
   );
 
@@ -102,13 +105,13 @@ export class CartController {
    */
   applyDiscount = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
       const { code } = req.body;
 
       const cart = await cartService.applyDiscountCode(userId, sessionId, code);
 
-      sendSuccess(res, cart, "Discount applied");
+      sendSuccess(res, cart, { message: "Discount applied" });
     },
   );
 
@@ -118,12 +121,12 @@ export class CartController {
    */
   removeDiscount = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
 
       const cart = await cartService.removeDiscountCode(userId, sessionId);
 
-      sendSuccess(res, cart, "Discount removed");
+      sendSuccess(res, cart, { message: "Discount removed" });
     },
   );
 
@@ -133,12 +136,12 @@ export class CartController {
    */
   mergeCarts = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { sessionId } = req.body;
 
       const cart = await cartService.mergeCarts(userId, sessionId);
 
-      sendSuccess(res, cart, "Carts merged successfully");
+      sendSuccess(res, cart, { message: "Carts merged successfully" });
     },
   );
 
@@ -148,18 +151,17 @@ export class CartController {
    */
   validateCart = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const sessionId = req.headers["x-session-id"] as string | undefined;
 
       const result = await cartService.validateCart(userId, sessionId);
 
-      sendSuccess(
-        res,
-        result,
-        result.issues.length > 0
-          ? "Cart has issues that need attention"
-          : "Cart is valid",
-      );
+      sendSuccess(res, result, {
+        message:
+          result.issues.length > 0
+            ? "Cart has issues that need attention"
+            : "Cart is valid",
+      });
     },
   );
 }

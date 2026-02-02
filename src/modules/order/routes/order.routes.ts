@@ -36,12 +36,16 @@ router.use(authenticate);
  */
 
 // Create order from cart
-router.post("/", validate(createOrderSchema), orderController.create);
+router.post(
+  "/",
+  validate({ body: createOrderSchema.shape.body }),
+  orderController.create,
+);
 
 // Get user's own orders
 router.get(
   "/my-orders",
-  validate(userOrdersSchema),
+  validate({ query: userOrdersSchema.shape.query }),
   orderController.getUserOrders,
 );
 
@@ -53,7 +57,7 @@ router.get(
 router.get(
   "/seller-orders",
   sellerAccess,
-  validate(sellerOrdersSchema),
+  validate({ query: sellerOrdersSchema.shape.query }),
   orderController.getSellerOrders,
 );
 
@@ -61,7 +65,10 @@ router.get(
 router.post(
   "/:orderId/items/:itemId/tracking",
   sellerAccess,
-  validate(addTrackingSchema),
+  validate({
+    params: addTrackingSchema.shape.params,
+    body: addTrackingSchema.shape.body,
+  }),
   orderController.addTracking,
 );
 
@@ -73,7 +80,7 @@ router.post(
 router.get(
   "/",
   adminOnly,
-  validate(orderFiltersSchema),
+  validate({ query: orderFiltersSchema.shape.query }),
   orderController.getAll,
 );
 
@@ -81,7 +88,7 @@ router.get(
 router.get(
   "/statistics",
   authorize(UserRole.ADMIN, UserRole.SELLER),
-  validate(orderStatsSchema),
+  validate({ query: orderStatsSchema.shape.query }),
   orderController.getStatistics,
 );
 
@@ -89,7 +96,10 @@ router.get(
 router.patch(
   "/:orderId/status",
   authorize(UserRole.ADMIN, UserRole.SELLER),
-  validate(updateOrderStatusSchema),
+  validate({
+    params: updateOrderStatusSchema.shape.params,
+    body: updateOrderStatusSchema.shape.body,
+  }),
   orderController.updateStatus,
 );
 
@@ -98,19 +108,26 @@ router.patch(
  */
 
 // Get order by ID
-router.get("/:orderId", validate(getOrderSchema), orderController.getById);
+router.get(
+  "/:orderId",
+  validate({ params: getOrderSchema.shape.params }),
+  orderController.getById,
+);
 
 // Get order by order number
 router.get(
   "/number/:orderNumber",
-  validate(getOrderByNumberSchema),
+  validate({ params: getOrderByNumberSchema.shape.params }),
   orderController.getByOrderNumber,
 );
 
 // Cancel order
 router.post(
   "/:orderId/cancel",
-  validate(cancelOrderSchema),
+  validate({
+    params: cancelOrderSchema.shape.params,
+    body: cancelOrderSchema.shape.body,
+  }),
   orderController.cancel,
 );
 

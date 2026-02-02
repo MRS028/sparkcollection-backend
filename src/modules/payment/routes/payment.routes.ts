@@ -39,21 +39,21 @@ router.use(authenticate);
 // Create payment intent
 router.post(
   "/create-intent",
-  validate(createPaymentIntentSchema),
+  validate({ body: createPaymentIntentSchema.shape.body }),
   paymentController.createPaymentIntent,
 );
 
 // Confirm payment
 router.post(
   "/confirm",
-  validate(confirmPaymentSchema),
+  validate({ body: confirmPaymentSchema.shape.body }),
   paymentController.confirmPayment,
 );
 
 // Get payment details
 router.get(
   "/:orderId",
-  validate(getPaymentDetailsSchema),
+  validate({ params: getPaymentDetailsSchema.shape.params }),
   paymentController.getPaymentDetails,
 );
 
@@ -65,7 +65,10 @@ router.get(
 router.post(
   "/:orderId/refund",
   authorize(UserRole.ADMIN, UserRole.SUPPORT_AGENT),
-  validate(refundSchema),
+  validate({
+    params: refundSchema.shape.params,
+    body: refundSchema.shape.body,
+  }),
   paymentController.refund,
 );
 

@@ -19,7 +19,7 @@ export class OrderController {
    */
   create = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { shippingAddress, billingAddress, paymentMethod, notes } =
         req.body;
 
@@ -30,7 +30,10 @@ export class OrderController {
         notes,
       });
 
-      sendSuccess(res, order, "Order created successfully", 201);
+      sendSuccess(res, order, {
+        message: "Order created successfully",
+        statusCode: 201,
+      });
     },
   );
 
@@ -41,12 +44,12 @@ export class OrderController {
   getById = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { orderId } = req.params;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       const role = req.user?.role as UserRole | undefined;
 
       const order = await orderService.getById(orderId, userId, role);
 
-      sendSuccess(res, order, "Order retrieved successfully");
+      sendSuccess(res, order, { message: "Order retrieved successfully" });
     },
   );
 
@@ -60,7 +63,7 @@ export class OrderController {
 
       const order = await orderService.getByOrderNumber(orderNumber);
 
-      sendSuccess(res, order, "Order retrieved successfully");
+      sendSuccess(res, order, { message: "Order retrieved successfully" });
     },
   );
 
@@ -70,7 +73,7 @@ export class OrderController {
    */
   getUserOrders = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const { page, limit, sortBy, sortOrder } = req.query;
 
       const result = await orderService.getUserOrders(userId, {
@@ -95,7 +98,7 @@ export class OrderController {
    */
   getSellerOrders = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const sellerId = req.user!.id;
+      const sellerId = req.user!.userId;
       const { page, limit, sortBy, sortOrder, status } = req.query;
 
       const result = await orderService.getSellerOrders(
@@ -169,7 +172,7 @@ export class OrderController {
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { orderId } = req.params;
       const { status, message } = req.body;
-      const actorId = req.user!.id;
+      const actorId = req.user!.userId;
 
       const order = await orderService.updateStatus(
         orderId,
@@ -178,7 +181,7 @@ export class OrderController {
         actorId,
       );
 
-      sendSuccess(res, order, "Order status updated");
+      sendSuccess(res, order, { message: "Order status updated" });
     },
   );
 
@@ -190,12 +193,12 @@ export class OrderController {
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { orderId } = req.params;
       const { reason } = req.body;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const role = req.user!.role as UserRole;
 
       const order = await orderService.cancel(orderId, reason, userId, role);
 
-      sendSuccess(res, order, "Order cancelled");
+      sendSuccess(res, order, { message: "Order cancelled" });
     },
   );
 
@@ -207,7 +210,7 @@ export class OrderController {
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { orderId, itemId } = req.params;
       const { trackingNumber } = req.body;
-      const actorId = req.user!.id;
+      const actorId = req.user!.userId;
 
       const order = await orderService.addTracking(
         orderId,
@@ -216,7 +219,7 @@ export class OrderController {
         actorId,
       );
 
-      sendSuccess(res, order, "Tracking added");
+      sendSuccess(res, order, { message: "Tracking added" });
     },
   );
 
@@ -228,7 +231,7 @@ export class OrderController {
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { startDate, endDate } = req.query;
       const role = req.user!.role as UserRole;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
 
       const dateRange =
         startDate && endDate
@@ -244,7 +247,7 @@ export class OrderController {
         dateRange,
       );
 
-      sendSuccess(res, stats, "Statistics retrieved");
+      sendSuccess(res, stats, { message: "Statistics retrieved" });
     },
   );
 }

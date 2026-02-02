@@ -4,6 +4,15 @@
 
 export * from "./models/Cart.model.js";
 export * from "./services/cart.service.js";
-export * from "./controllers/cart.controller.js";
+// export * from "./controllers/cart.controller.js";
 export * from "./routes/cart.routes.js";
-export * from "./validators/cart.validator.js";
+// Note: validators export types that may overlap with service, use service types for internal use
+export {
+  addToCartSchema,
+  updateCartItemSchema,
+  removeCartItemSchema,
+  applyDiscountSchema,
+  mergeCartsSchema,
+  ApplyDiscountInput,
+  MergeCartsInput,
+} from "./validators/cart.validator.js";

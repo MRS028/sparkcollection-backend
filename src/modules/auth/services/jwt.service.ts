@@ -30,7 +30,7 @@ class JWTService {
    */
   public generateAccessToken(payload: Omit<JwtPayload, "iat" | "exp">): string {
     return jwt.sign(payload, config.jwt.accessSecret, {
-      expiresIn: config.jwt.accessExpiry,
+      expiresIn: config.jwt.accessExpiry as jwt.SignOptions["expiresIn"],
     });
   }
 

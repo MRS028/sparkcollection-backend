@@ -6,7 +6,7 @@
 import http from "http";
 import { createApp } from "./app.js";
 import { config } from "./config/index.js";
-import { connectDatabase, disconnectDatabase } from "./config/database.js";
+import { database } from "./config/database.js";
 import { redis } from "./config/redis.js";
 import { logger } from "./shared/utils/logger.js";
 
@@ -29,7 +29,7 @@ async function startServer(): Promise<void> {
   try {
     // Connect to database
     logger.info("Connecting to database...");
-    await connectDatabase();
+    await database.connect();
     logger.info("Database connected successfully");
 
     // Create Express app
@@ -39,16 +39,16 @@ async function startServer(): Promise<void> {
     const server = http.createServer(app);
 
     // Start listening
-    server.listen(config.server.port, () => {
+    server.listen(config.app.port, () => {
       logger.info(`
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
 ║   🚀 SaaS eCommerce Backend Server Started!              ║
 ║                                                          ║
-║   Environment: ${config.server.env.padEnd(38)}║
-║   Port: ${config.server.port.toString().padEnd(46)}║
-║   API: http://localhost:${config.server.port}/api/v1${"".padEnd(26)}║
-║   Health: http://localhost:${config.server.port}/health${"".padEnd(23)}║
+║   Environment: ${config.app.env.padEnd(38)}║
+║   Port: ${config.app.port.toString().padEnd(46)}║
+║   API: http://localhost:${config.app.port}/api/v1${"".padEnd(26)}║
+║   Health: http://localhost:${config.app.port}/health${"".padEnd(23)}║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
       `);
@@ -67,7 +67,7 @@ async function startServer(): Promise<void> {
         try {
           // Disconnect from database
           logger.info("Closing database connection...");
-          await disconnectDatabase();
+          await database.disconnect();
           logger.info("Database connection closed");
 
           // Disconnect from Redis
@@ -104,13 +104,11 @@ async function startServer(): Promise<void> {
 
       switch (error.code) {
         case "EACCES":
-          logger.error(
-            `Port ${config.server.port} requires elevated privileges`,
-          );
+          logger.error(`Port ${config.app.port} requires elevated privileges`);
           process.exit(1);
           break;
         case "EADDRINUSE":
-          logger.error(`Port ${config.server.port} is already in use`);
+          logger.error(`Port ${config.app.port} is already in use`);
           process.exit(1);
           break;
         default:

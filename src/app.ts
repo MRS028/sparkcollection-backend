@@ -8,7 +8,6 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import mongoSanitize from "express-mongo-sanitize";
 import { config } from "./config/index.js";
 import { errorHandler } from "./shared/middleware/errorHandler.js";
 import {
@@ -25,9 +24,10 @@ import { userRoutes } from "./modules/user/index.js";
 import { productRoutes } from "./modules/product/index.js";
 import { cartRoutes } from "./modules/cart/index.js";
 import { orderRoutes } from "./modules/order/index.js";
-import { paymentRoutes } from "./modules/payment/index.js";
-import { shippingRoutes } from "./modules/shipping/index.js";
-import { supportRoutes } from "./modules/support/index.js";
+import { shippingRoutes } from "./modules/shipping/routes/shipping.routes.js";
+import { paymentRoutes } from "./modules/payment/routes/payment.routes.js";
+import { supportRoutes } from "./modules/support/routes/support.routes.js";
+
 
 /**
  * Create and configure Express application
@@ -55,7 +55,7 @@ export function createApp(): Application {
   // CORS configuration
   app.use(
     cors({
-      origin: config.server.corsOrigins,
+      origin: config.cors.origin,
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: [
@@ -91,9 +91,6 @@ export function createApp(): Application {
 
   // ==================== Security & Performance ====================
 
-  // Sanitize MongoDB queries
-  app.use(mongoSanitize());
-
   // Compression
   app.use(compression());
 
@@ -115,7 +112,7 @@ export function createApp(): Application {
 
       if (res.statusCode >= 400) {
         logger.warn("HTTP Request", logData);
-      } else if (config.server.env === "development") {
+      } else if (config.app.isDevelopment) {
         logger.info("HTTP Request", logData);
       }
     });
@@ -139,7 +136,7 @@ export function createApp(): Application {
       message: "Server is healthy",
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: config.server.env,
+      environment: config.app.env,
     });
   });
 
@@ -215,3 +212,4 @@ export function createApp(): Application {
 }
 
 export default createApp;
+

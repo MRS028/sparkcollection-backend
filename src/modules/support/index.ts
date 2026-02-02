@@ -8,4 +8,16 @@ export * from "./services/ticket.service.js";
 export * from "./services/ai-support.service.js";
 export * from "./controllers/support.controller.js";
 export * from "./routes/support.routes.js";
-export * from "./validators/support.validator.js";
+// Note: validators export types that may overlap with service, use service types for internal use
+export {
+  createTicketSchema,
+  getTicketSchema,
+  getByTicketNumberSchema,
+  addMessageSchema,
+  updateStatusSchema,
+  assignTicketSchema,
+  updatePrioritySchema,
+  ticketFiltersSchema,
+  chatMessageSchema,
+  getChatHistorySchema,
+} from "./validators/support.validator.js";

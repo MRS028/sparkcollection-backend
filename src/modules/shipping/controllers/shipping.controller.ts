@@ -19,7 +19,7 @@ export class ShippingController {
    */
   create = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
-      const sellerId = req.user!.id;
+      const sellerId = req.user!.userId;
       const {
         orderId,
         orderItemId,
@@ -45,7 +45,10 @@ export class ShippingController {
         notes,
       });
 
-      sendSuccess(res, shipment, "Shipment created", 201);
+      sendSuccess(res, shipment, {
+        message: "Shipment created",
+        statusCode: 201,
+      });
     },
   );
 
@@ -59,7 +62,7 @@ export class ShippingController {
 
       const shipment = await shippingService.getById(shipmentId);
 
-      sendSuccess(res, shipment, "Shipment retrieved");
+      sendSuccess(res, shipment, { message: "Shipment retrieved" });
     },
   );
 
@@ -89,7 +92,7 @@ export class ShippingController {
             timestamp: event.timestamp,
           })),
         },
-        "Tracking info retrieved",
+        { message: "Tracking info retrieved" },
       );
     },
   );
@@ -104,7 +107,7 @@ export class ShippingController {
 
       const shipments = await shippingService.getByOrder(orderId);
 
-      sendSuccess(res, shipments, "Order shipments retrieved");
+      sendSuccess(res, shipments, { message: "Order shipments retrieved" });
     },
   );
 
@@ -124,7 +127,7 @@ export class ShippingController {
         location,
       );
 
-      sendSuccess(res, shipment, "Shipment status updated");
+      sendSuccess(res, shipment, { message: "Shipment status updated" });
     },
   );
 
@@ -138,7 +141,7 @@ export class ShippingController {
 
       const shipment = await shippingService.cancel(shipmentId);
 
-      sendSuccess(res, shipment, "Shipment cancelled");
+      sendSuccess(res, shipment, { message: "Shipment cancelled" });
     },
   );
 
@@ -149,7 +152,7 @@ export class ShippingController {
   getAll = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const role = req.user!.role as UserRole;
-      const userId = req.user!.id;
+      const userId = req.user!.userId;
       const {
         page,
         limit,
@@ -201,7 +204,7 @@ export class ShippingController {
         isCOD === "true",
       );
 
-      sendSuccess(res, rates, "Shipping rates retrieved");
+      sendSuccess(res, rates, { message: "Shipping rates retrieved" });
     },
   );
 }

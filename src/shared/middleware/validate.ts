@@ -4,10 +4,10 @@
  */
 
 import { Request, Response, NextFunction } from "express";
-import { AnyZodObject, ZodError, ZodEffects } from "zod";
+import { AnyZodObject, ZodError, ZodEffects, ZodTypeAny } from "zod";
 import { ValidationError } from "../errors/index.js";
 
-type ZodSchema = AnyZodObject | ZodEffects<AnyZodObject>;
+type ZodSchema = AnyZodObject | ZodEffects<ZodTypeAny>;
 
 interface ValidationSchemas {
   body?: ZodSchema;

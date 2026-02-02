@@ -85,7 +85,7 @@ export const updatePrioritySchema = z.object({
 
 // Ticket filters
 export const ticketFiltersSchema = z.object({
-  query: paginationSchema.shape.query.extend({
+  query: paginationSchema.extend({
     status: z.nativeEnum(TicketStatus).optional(),
     priority: z.nativeEnum(TicketPriority).optional(),
     category: z.nativeEnum(TicketCategory).optional(),

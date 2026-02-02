@@ -66,6 +66,15 @@ export interface ISupportTicket extends Document {
   tenantId: string;
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  addMessage(
+    senderId: Types.ObjectId,
+    senderType: "customer" | "agent" | "bot",
+    content: string,
+    isInternal?: boolean,
+    attachments?: string[],
+  ): void;
 }
 
 // Message Schema

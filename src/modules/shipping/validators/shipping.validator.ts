@@ -81,7 +81,7 @@ export const cancelShipmentSchema = z.object({
 
 // Shipment filters
 export const shipmentFiltersSchema = z.object({
-  query: paginationSchema.shape.query.extend({
+  query: paginationSchema.extend({
     orderId: objectIdSchema.optional(),
     status: z.nativeEnum(ShipmentStatus).optional(),
     provider: z.nativeEnum(DeliveryProvider).optional(),

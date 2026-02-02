@@ -20,7 +20,7 @@ import {
 import { logger } from "../../../shared/utils/logger.js";
 
 // Initialize Stripe
-const stripe = new Stripe(config.stripe.secretKey, {
+const stripe = new Stripe(config.stripe.secretKey || "", {
   apiVersion: "2023-10-16",
 });
 

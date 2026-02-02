@@ -31,14 +31,14 @@ const router = Router();
 // Track shipment by tracking number
 router.get(
   "/track/:trackingNumber",
-  validate(getByTrackingSchema),
+  validate({ params: getByTrackingSchema.shape.params }),
   shippingController.track,
 );
 
 // Get shipping rates (public for checkout)
 router.get(
   "/rates",
-  validate(getShippingRatesSchema),
+  validate({ query: getShippingRatesSchema.shape.query }),
   shippingController.getShippingRates,
 );
 
@@ -51,7 +51,7 @@ router.use(authenticate);
 router.post(
   "/",
   sellerAccess,
-  validate(createShipmentSchema),
+  validate({ body: createShipmentSchema.shape.body }),
   shippingController.create,
 );
 
@@ -59,7 +59,7 @@ router.post(
 router.get(
   "/",
   authorize(UserRole.ADMIN, UserRole.SELLER),
-  validate(shipmentFiltersSchema),
+  validate({ query: shipmentFiltersSchema.shape.query }),
   shippingController.getAll,
 );
 
@@ -69,7 +69,7 @@ router.get("/order/:orderId", shippingController.getByOrder);
 // Get shipment by ID
 router.get(
   "/:shipmentId",
-  validate(getShipmentSchema),
+  validate({ params: getShipmentSchema.shape.params }),
   shippingController.getById,
 );
 
@@ -77,7 +77,10 @@ router.get(
 router.patch(
   "/:shipmentId/status",
   authorize(UserRole.ADMIN, UserRole.SELLER),
-  validate(updateStatusSchema),
+  validate({
+    params: updateStatusSchema.shape.params,
+    body: updateStatusSchema.shape.body,
+  }),
   shippingController.updateStatus,
 );
 
@@ -85,7 +88,7 @@ router.patch(
 router.post(
   "/:shipmentId/cancel",
   authorize(UserRole.ADMIN, UserRole.SELLER),
-  validate(cancelShipmentSchema),
+  validate({ params: cancelShipmentSchema.shape.params }),
   shippingController.cancel,
 );
 

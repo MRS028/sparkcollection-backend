@@ -34,7 +34,7 @@ const router = Router();
 router.post(
   "/chat",
   optionalAuth,
-  validate(chatMessageSchema),
+  validate({ body: chatMessageSchema.shape.body }),
   supportController.chat,
 );
 
@@ -42,7 +42,7 @@ router.post(
 router.get(
   "/chat/:sessionId",
   optionalAuth,
-  validate(getChatHistorySchema),
+  validate({ params: getChatHistorySchema.shape.params }),
   supportController.getChatHistory,
 );
 
@@ -60,7 +60,7 @@ router.use("/tickets", authenticate);
 // Customer routes
 router.post(
   "/tickets",
-  validate(createTicketSchema),
+  validate({ body: createTicketSchema.shape.body }),
   supportController.createTicket,
 );
 
@@ -70,7 +70,7 @@ router.get("/tickets/my-tickets", supportController.getUserTickets);
 router.get(
   "/tickets",
   authorize(UserRole.ADMIN, UserRole.SUPPORT_AGENT),
-  validate(ticketFiltersSchema),
+  validate({ query: ticketFiltersSchema.shape.query }),
   supportController.getAllTickets,
 );
 
@@ -83,19 +83,22 @@ router.get(
 // Shared ticket routes (with authorization in controller)
 router.get(
   "/tickets/:ticketId",
-  validate(getTicketSchema),
+  validate({ params: getTicketSchema.shape.params }),
   supportController.getTicketById,
 );
 
 router.get(
   "/tickets/number/:ticketNumber",
-  validate(getByTicketNumberSchema),
+  validate({ params: getByTicketNumberSchema.shape.params }),
   supportController.getTicketByNumber,
 );
 
 router.post(
   "/tickets/:ticketId/messages",
-  validate(addMessageSchema),
+  validate({
+    params: addMessageSchema.shape.params,
+    body: addMessageSchema.shape.body,
+  }),
   supportController.addMessage,
 );
 
@@ -103,21 +106,30 @@ router.post(
 router.patch(
   "/tickets/:ticketId/status",
   authorize(UserRole.ADMIN, UserRole.SUPPORT_AGENT),
-  validate(updateStatusSchema),
+  validate({
+    params: updateStatusSchema.shape.params,
+    body: updateStatusSchema.shape.body,
+  }),
   supportController.updateStatus,
 );
 
 router.post(
   "/tickets/:ticketId/assign",
   authorize(UserRole.ADMIN, UserRole.SUPPORT_AGENT),
-  validate(assignTicketSchema),
+  validate({
+    params: assignTicketSchema.shape.params,
+    body: assignTicketSchema.shape.body,
+  }),
   supportController.assignTicket,
 );
 
 router.patch(
   "/tickets/:ticketId/priority",
   authorize(UserRole.ADMIN, UserRole.SUPPORT_AGENT),
-  validate(updatePrioritySchema),
+  validate({
+    params: updatePrioritySchema.shape.params,
+    body: updatePrioritySchema.shape.body,
+  }),
   supportController.updatePriority,
 );
 

@@ -4,7 +4,7 @@
  */
 
 import { Router } from "express";
-import { cartController } from "../controllers/cart.controller.js";
+import { cartController } from "../controllers/cart.controller";
 import {
   authenticate,
   optionalAuth,
@@ -31,7 +31,7 @@ router.get("/", optionalAuth, cartController.getCart);
 router.post(
   "/items",
   optionalAuth,
-  validate(addToCartSchema),
+  validate({ body: addToCartSchema.shape.body }),
   cartController.addItem,
 );
 
@@ -39,7 +39,10 @@ router.post(
 router.patch(
   "/items/:itemId",
   optionalAuth,
-  validate(updateCartItemSchema),
+  validate({
+    params: updateCartItemSchema.shape.params,
+    body: updateCartItemSchema.shape.body,
+  }),
   cartController.updateItem,
 );
 
@@ -47,7 +50,7 @@ router.patch(
 router.delete(
   "/items/:itemId",
   optionalAuth,
-  validate(removeCartItemSchema),
+  validate({ params: removeCartItemSchema.shape.params }),
   cartController.removeItem,
 );
 
@@ -65,7 +68,7 @@ router.post("/validate", optionalAuth, cartController.validateCart);
 router.post(
   "/discount",
   authenticate,
-  validate(applyDiscountSchema),
+  validate({ body: applyDiscountSchema.shape.body }),
   cartController.applyDiscount,
 );
 
@@ -76,7 +79,7 @@ router.delete("/discount", authenticate, cartController.removeDiscount);
 router.post(
   "/merge",
   authenticate,
-  validate(mergeCartsSchema),
+  validate({ body: mergeCartsSchema.shape.body }),
   cartController.mergeCarts,
 );
 
