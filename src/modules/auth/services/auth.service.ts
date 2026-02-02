@@ -276,9 +276,19 @@ class AuthService {
   /**
    * Logout from all devices
    */
-  public async logoutAll(userId: string, ipAddress: string): Promise<void> {
+  public async logoutAll(
+    userId: string,
+    ipAddress: string,
+    accessToken?: string,
+  ): Promise<void> {
     await this.revokeAllUserTokens(new Types.ObjectId(userId), ipAddress);
     await this.invalidateUserCache(userId);
+
+    // Blacklist the current access token if provided
+    if (accessToken) {
+      await this.blacklistAccessToken(accessToken);
+    }
+
     logger.info(`User logged out from all devices: ${userId}`);
   }
 

@@ -189,7 +189,11 @@ export const logoutAll = asyncHandler(
     const userId = req.user!.userId;
     const ipAddress = getClientIp(req);
 
-    await authService.logoutAll(userId, ipAddress);
+    // Get access token to blacklist it
+    const accessToken =
+      jwtService.extractTokenFromHeader(req.headers.authorization) || undefined;
+
+    await authService.logoutAll(userId, ipAddress, accessToken);
 
     // Clear refresh token cookie
     clearRefreshTokenCookie(res);
@@ -222,7 +226,19 @@ export const forgotPassword = asyncHandler(
  */
 export const resetPassword = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
-    const { token, password } = req.body as ResetPasswordInput;
+    // Get reset token from Authorization header
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+
+    if (!token) {
+      throw new Error("Reset token is required in Authorization header");
+    }
+
+    const { password } = req.body as ResetPasswordInput;
     const ipAddress = getClientIp(req);
 
     await authService.resetPassword(token, password, ipAddress);

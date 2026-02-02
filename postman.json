@@ -356,7 +356,14 @@
           ],
           "request": {
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "paste-reset-token-from-email-here",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [
@@ -367,14 +374,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"paste-token-from-email-here\",\n  \"password\": \"NewPassword@123\"\n}"
+              "raw": "{\n  \"password\": \"NewPassword@123\",\n  \"confirmPassword\": \"NewPassword@123\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/auth/reset-password",
               "host": ["{{apiV1}}"],
               "path": ["auth", "reset-password"]
             },
-            "description": "Reset password using token from email. Token expires in 1 hour. All existing sessions are logged out after successful reset."
+            "description": "Reset password using token from email (passed in Authorization header as Bearer token). Token expires in 1 hour. All existing sessions are logged out after successful reset."
           }
         },
         {
