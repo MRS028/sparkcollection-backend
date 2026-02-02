@@ -10,7 +10,7 @@ import {
   paginationSchema,
   objectIdSchema,
 } from "../../../shared/validators/index.js";
-import { UserRole, UserStatus } from "../../../shared/types/index.js";
+import { Role, UserStatus } from "../../../shared/types/index.js";
 
 // Create user validation (admin)
 export const createUserSchema = z.object({
@@ -18,12 +18,13 @@ export const createUserSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   firstName: nameSchema,
   lastName: nameSchema,
-  role: z.nativeEnum(UserRole).optional(),
+  role: z.nativeEnum(Role).optional(),
   phone: phoneSchema,
 });
 
-// Update profile validation
+// Update profile validation (excludes email - users cannot change their email)
 export const updateProfileSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
   firstName: nameSchema.optional(),
   lastName: nameSchema.optional(),
   phone: phoneSchema,
@@ -32,7 +33,7 @@ export const updateProfileSchema = z.object({
 
 // Update user validation (admin)
 export const updateUserSchema = updateProfileSchema.extend({
-  role: z.nativeEnum(UserRole).optional(),
+  role: z.nativeEnum(Role).optional(),
   status: z.nativeEnum(UserStatus).optional(),
 });
 
@@ -43,7 +44,7 @@ export const userIdParamsSchema = z.object({
 
 // User list query
 export const userListQuerySchema = paginationSchema.extend({
-  role: z.nativeEnum(UserRole).optional(),
+  role: z.nativeEnum(Role).optional(),
   status: z.nativeEnum(UserStatus).optional(),
   search: z.string().optional(),
   emailVerified: z
@@ -54,7 +55,7 @@ export const userListQuerySchema = paginationSchema.extend({
 
 // Update role validation
 export const updateRoleSchema = z.object({
-  role: z.nativeEnum(UserRole),
+  role: z.nativeEnum(Role),
 });
 
 // Update status validation

@@ -37,8 +37,8 @@ export const defaultLimiter = rateLimit({
  * Strict rate limiter for authentication routes
  */
 export const authLimiter = rateLimit({
-  windowMs: 3000 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+  windowMs: 30000 * 60 * 1000, // 15 minutes
+  max: 50, // 50 attempts per window
   message: {
     success: false,
     error: {
@@ -58,7 +58,7 @@ export const authLimiter = rateLimit({
  */
 export const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 attempts per hour
+  max: 30, // 3 attempts per hour
   message: {
     success: false,
     error: {

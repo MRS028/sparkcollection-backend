@@ -4,11 +4,7 @@
  */
 
 import { Response, NextFunction } from "express";
-import {
-  AuthRequest,
-  JwtPayload,
-  UserRole,
-} from "../../../shared/types/index.js";
+import { AuthRequest, JwtPayload, Role } from "../../../shared/types/index.js";
 import { jwtService } from "../services/jwt.service.js";
 import { authService } from "../services/auth.service.js";
 import {
@@ -84,10 +80,15 @@ export const optionalAuth = async (
 /**
  * Authorize based on user roles
  */
-export const authorize = (...allowedRoles: UserRole[]) => {
+export const authorize = (...allowedRoles: Role[]) => {
   return (req: AuthRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       return next(new UnauthorizedError("Authentication required"));
+    }
+
+    // SUPER_ADMIN has access to everything
+    if (req.user.role === Role.SUPER_ADMIN) {
+      return next();
     }
 
     if (!allowedRoles.includes(req.user.role)) {
@@ -103,29 +104,19 @@ export const authorize = (...allowedRoles: UserRole[]) => {
 };
 
 /**
- * Admin only access
+ * Admin only access (includes SUPER_ADMIN)
  */
-export const adminOnly = authorize(UserRole.ADMIN);
+export const adminOnly = authorize(Role.SUPER_ADMIN, Role.ADMIN);
 
 /**
- * Seller access (includes admin)
+ * Seller access (includes SUPER_ADMIN and admin)
  */
-export const sellerAccess = authorize(UserRole.ADMIN, UserRole.SELLER);
+export const sellerAccess = authorize(Role.SUPER_ADMIN, Role.ADMIN);
 
 /**
- * Support agent access (includes admin)
+ * Customer access (all authenticated users - SUPER_ADMIN has access via authorize check)
  */
-export const supportAccess = authorize(UserRole.ADMIN, UserRole.SUPPORT_AGENT);
-
-/**
- * Customer access (all authenticated users)
- */
-export const customerAccess = authorize(
-  UserRole.ADMIN,
-  UserRole.SELLER,
-  UserRole.CUSTOMER,
-  UserRole.SUPPORT_AGENT,
-);
+export const customerAccess = authorize(Role.ADMIN, Role.CUSTOMER);
 
 /**
  * Check if user owns the resource or is admin
@@ -143,8 +134,8 @@ export const ownerOrAdmin = (
         throw new UnauthorizedError("Authentication required");
       }
 
-      // Admin can access anything
-      if (req.user.role === UserRole.ADMIN) {
+      // SUPER_ADMIN and ADMIN can access anything
+      if (req.user.role === Role.SUPER_ADMIN || req.user.role === Role.ADMIN) {
         return next();
       }
 

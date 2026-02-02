@@ -12,7 +12,7 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.string().transform(Number).default("5000"),
   API_VERSION: z.string().default("v1"),
-  APP_NAME: z.string().default("SaaS-Ecommerce"),
+  APP_NAME: z.string().default("Spark-Collection-UP-Backend"),
 
   // Database
   MONGODB_URI: z.string().min(1, "MongoDB URI is required"),

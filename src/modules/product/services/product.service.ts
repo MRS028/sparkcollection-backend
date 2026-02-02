@@ -236,7 +236,7 @@ class ProductService {
     }
 
     // Update category count if category changed
-    if (input.category && input.category !== product.category.toString()) {
+    if (input.category && product.category && input.category !== product.category.toString()) {
       await Promise.all([
         Category.findByIdAndUpdate(product.category, {
           $inc: { productCount: -1 },

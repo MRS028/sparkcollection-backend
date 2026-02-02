@@ -9,6 +9,7 @@ import { config } from "./config/index.js";
 import { database } from "./config/database.js";
 import { redis } from "./config/redis.js";
 import { logger } from "./shared/utils/logger.js";
+import { seedSuperAdmin } from "./shared/utils/seedSuperAdmin.js";
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error: Error) => {
@@ -32,6 +33,10 @@ async function startServer(): Promise<void> {
     await database.connect();
     logger.info("Database connected successfully");
 
+    // Seed super admin on initial startup
+    logger.info("Checking for super admin...");
+    await seedSuperAdmin();
+
     // Create Express app
     const app = createApp();
 
@@ -43,7 +48,7 @@ async function startServer(): Promise<void> {
       logger.info(`
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║   🚀 SaaS eCommerce Backend Server Started!              ║
+║   🚀 Spark-Collection-UP-Backend Started!                ║
 ║                                                          ║
 ║   Environment: ${config.app.env.padEnd(38)}║
 ║   Port: ${config.app.port.toString().padEnd(46)}║

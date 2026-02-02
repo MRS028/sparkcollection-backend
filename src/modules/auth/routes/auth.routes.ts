@@ -36,11 +36,7 @@ router.post(
   authController.login,
 );
 
-router.post(
-  "/refresh",
-  validateBody(refreshTokenSchema.partial()),
-  authController.refreshToken,
-);
+router.post("/refresh", authController.refreshToken);
 
 router.post(
   "/forgot-password",

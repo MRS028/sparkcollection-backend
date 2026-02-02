@@ -13,7 +13,12 @@ import {
   NotFoundError,
   ConflictError,
 } from "../../../shared/errors/index.js";
-import { IUser, UserRole, UserStatus } from "../../../shared/types/index.js";
+import { JwtPayload } from "../../../shared/types/index.js";
+import {
+  IUser,
+  Role,
+  UserStatus,
+} from "../../user/interfaces/user.interface.js";
 import { redis } from "../../../config/redis.js";
 import { logger } from "../../../shared/utils/logger.js";
 import { config } from "../../../config/index.js";
@@ -24,7 +29,7 @@ export interface RegisterInput {
   firstName: string;
   lastName: string;
   phone?: string;
-  role?: UserRole;
+  role?: Role;
 }
 
 export interface LoginInput {
@@ -61,7 +66,7 @@ class AuthService {
       firstName,
       lastName,
       phone,
-      role: role || UserRole.CUSTOMER,
+      role: role || Role.CUSTOMER,
       status: UserStatus.PENDING_VERIFICATION,
     });
 
@@ -101,13 +106,15 @@ class AuthService {
     const { email, password } = input;
 
     // Find user with password
-    const user = await User.findByEmail(email);
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+password",
+    );
     if (!user) {
       throw new UnauthorizedError("Invalid email or password");
     }
 
     // Check if account is active
-    if (user.status === UserStatus.SUSPENDED) {
+    if (user.status === UserStatus.BLOCKED) {
       throw new UnauthorizedError("Account has been suspended");
     }
 
@@ -116,6 +123,9 @@ class AuthService {
     }
 
     // Verify password
+    if (!user.comparePassword) {
+      throw new UnauthorizedError("Invalid account configuration");
+    }
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       throw new UnauthorizedError("Invalid email or password");
@@ -179,8 +189,16 @@ class AuthService {
 
     // Get user
     const user = await User.findById(storedToken.userId);
-    if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedError("User not found or inactive");
+    if (!user) {
+      throw new UnauthorizedError("User not found");
+    }
+
+    // Check if user is blocked or inactive
+    if (
+      user.status === UserStatus.BLOCKED ||
+      user.status === UserStatus.INACTIVE
+    ) {
+      throw new UnauthorizedError("Account is suspended or inactive");
     }
 
     // Generate new tokens
@@ -326,6 +344,9 @@ class AuthService {
     }
 
     // Verify current password
+    if (!user.comparePassword) {
+      throw new BadRequestError("Invalid account configuration");
+    }
     const isValid = await user.comparePassword(currentPassword);
     if (!isValid) {
       throw new BadRequestError("Current password is incorrect");
@@ -355,9 +376,10 @@ class AuthService {
     const user = await User.findById(userId);
     if (user) {
       await redis.set(cacheKey, user.toJSON(), 300); // 5 min cache
+      return user.toJSON() as IUser;
     }
 
-    return user;
+    return null;
   }
 
   // Private helper methods
@@ -392,8 +414,8 @@ class AuthService {
     await redis.del(`user:${userId}`);
   }
 
-  private sanitizeUser(user: IUser): Partial<IUser> {
-    const userObj = user.toJSON();
+  private sanitizeUser(user: any): Partial<IUser> {
+    const userObj = user.toJSON ? user.toJSON() : user;
     delete (userObj as Record<string, unknown>).password;
     return userObj;
   }

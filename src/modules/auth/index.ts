@@ -4,7 +4,6 @@ export {
   authorize,
   adminOnly,
   sellerAccess,
-  supportAccess,
   customerAccess,
   ownerOrAdmin,
   optionalAuth,

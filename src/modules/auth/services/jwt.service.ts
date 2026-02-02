@@ -6,7 +6,8 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { config } from "../../../config/index.js";
-import { JwtPayload, UserRole } from "../../../shared/types/index.js";
+import { JwtPayload } from "../../../shared/types/index.js";
+import { Role } from "../../user/interfaces/user.interface.js";
 import {
   InvalidTokenError,
   TokenExpiredError,
@@ -47,7 +48,7 @@ class JWTService {
   public generateTokenPair(
     userId: string,
     email: string,
-    role: UserRole,
+    role: Role,
     tenantId?: string,
   ): TokenPair {
     const payload: Omit<JwtPayload, "iat" | "exp"> = {

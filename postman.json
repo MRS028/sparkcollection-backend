@@ -1,16 +1,16 @@
 {
   "info": {
-    "name": "SaaS eCommerce Backend API",
-    "description": "Complete API collection for the SaaS eCommerce Backend with all routes",
+    "name": "Spark Collection Backend API",
+    "description": "Complete API collection for Spark Collection eCommerce Backend with automatic token management",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "auth": {
     "type": "bearer",
     "bearer": [
       {
         "key": "token",
-        "value": "{{authToken}}",
+        "value": "{{accessToken}}",
         "type": "string"
       }
     ]
@@ -18,7 +18,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000",
+      "value": "http://localhost:5000",
       "type": "string"
     },
     {
@@ -27,7 +27,17 @@
       "type": "string"
     },
     {
-      "key": "authToken",
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
       "value": "",
       "type": "string"
     },
@@ -44,6 +54,9 @@
         {
           "name": "Server Health",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -56,6 +69,9 @@
         {
           "name": "API Health",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -68,6 +84,9 @@
         {
           "name": "API Info",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -80,10 +99,10 @@
       ]
     },
     {
-      "name": "Authentication",
+      "name": "🔐 Authentication",
       "item": [
         {
-          "name": "Register",
+          "name": "Register Customer",
           "event": [
             {
               "listen": "test",
@@ -91,8 +110,14 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    const response = pm.response.json();",
-                  "    if (response.data && response.data.accessToken) {",
-                  "        pm.collectionVariables.set('authToken', response.data.accessToken);",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                  "        pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                  "        console.log('✅ Tokens saved automatically');",
+                  "    }",
+                  "    if (response.data && response.data.user && response.data.user._id) {",
+                  "        pm.collectionVariables.set('userId', response.data.user._id);",
+                  "        console.log('✅ User ID saved:', response.data.user._id);",
                   "    }",
                   "}"
                 ]
@@ -112,17 +137,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\",\n  \"name\": \"John Doe\"\n}"
+              "raw": "{\n  \"email\": \"customer@test.com\",\n  \"password\": \"Test@123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+1234567890\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/auth/register",
               "host": ["{{apiV1}}"],
               "path": ["auth", "register"]
-            }
+            },
+            "description": "Register a new customer account"
           }
         },
         {
-          "name": "Login",
+          "name": "Login Customer",
           "event": [
             {
               "listen": "test",
@@ -130,8 +156,16 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    if (response.data && response.data.accessToken) {",
-                  "        pm.collectionVariables.set('authToken', response.data.accessToken);",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                  "        pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                  "        console.log('✅ Access Token:', response.data.tokens.accessToken);",
+                  "        console.log('✅ Refresh Token:', response.data.tokens.refreshToken);",
+                  "    }",
+                  "    if (response.data && response.data.user && response.data.user._id) {",
+                  "        pm.collectionVariables.set('userId', response.data.user._id);",
+                  "        console.log('✅ User ID:', response.data.user._id);",
+                  "        console.log('✅ User Role:', response.data.user.role);",
                   "    }",
                   "}"
                 ]
@@ -151,17 +185,41 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\"\n}"
+              "raw": "{\n  \"email\": \"customer@test.com\",\n  \"password\": \"Test@123\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/auth/login",
               "host": ["{{apiV1}}"],
               "path": ["auth", "login"]
-            }
+            },
+            "description": "Login with customer credentials"
           }
         },
         {
-          "name": "Refresh Token",
+          "name": "Login as Super Admin ⭐",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.accessToken);",
+                  "        pm.collectionVariables.set('refreshToken', response.data.tokens.refreshToken);",
+                  "        console.log('✅ Super Admin Access Token:', response.data.tokens.accessToken);",
+                  "        console.log('✅ Refresh Token:', response.data.tokens.refreshToken);",
+                  "    }",
+                  "    if (response.data && response.data.user && response.data.user._id) {",
+                  "        pm.collectionVariables.set('userId', response.data.user._id);",
+                  "        console.log('✅ Super Admin User ID:', response.data.user._id);",
+                  "        console.log('✅ Role:', response.data.user.role);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -175,13 +233,69 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"your-refresh-token\"\n}"
+              "raw": "{\n  \"email\": \"admin@sparkcollection.com\",\n  \"password\": \"SuperAdmin@123\"\n}"
             },
+            "url": {
+              "raw": "{{apiV1}}/auth/login",
+              "host": ["{{apiV1}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login as Super Admin - has access to everything including creating admins and updating user roles"
+          }
+        },
+        {
+          "name": "🔄 Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                  "        if (response.data.refreshToken) {",
+                  "            pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "        }",
+                  "        console.log('✅ Tokens refreshed successfully');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{refreshToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
             "url": {
               "raw": "{{apiV1}}/auth/refresh",
               "host": ["{{apiV1}}"],
               "path": ["auth", "refresh"]
-            }
+            },
+            "description": "Refresh access token using refresh token from Authorization header (Bearer token)"
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/auth/me",
+              "host": ["{{apiV1}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get currently authenticated user details"
           }
         },
         {
@@ -199,13 +313,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+              "raw": "{\n  \"email\": \"customer@test.com\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/auth/forgot-password",
               "host": ["{{apiV1}}"],
               "path": ["auth", "forgot-password"]
-            }
+            },
+            "description": "Request password reset (sends reset token)"
           }
         },
         {
@@ -223,37 +338,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"reset-token\",\n  \"password\": \"NewPassword123!\"\n}"
+              "raw": "{\n  \"resetToken\": \"reset-token-from-email-or-response\",\n  \"newPassword\": \"NewPassword@123\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/auth/reset-password",
               "host": ["{{apiV1}}"],
               "path": ["auth", "reset-password"]
-            }
-          }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/auth/logout",
-              "host": ["{{apiV1}}"],
-              "path": ["auth", "logout"]
-            }
-          }
-        },
-        {
-          "name": "Logout All Devices",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/auth/logout-all",
-              "host": ["{{apiV1}}"],
-              "path": ["auth", "logout-all"]
-            }
+            },
+            "description": "Reset password using reset token"
           }
         },
         {
@@ -268,34 +360,87 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+              "raw": "{\n  \"currentPassword\": \"Test@123\",\n  \"newPassword\": \"NewPassword@123\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/auth/change-password",
               "host": ["{{apiV1}}"],
               "path": ["auth", "change-password"]
-            }
+            },
+            "description": "Change password when logged in"
           }
         },
         {
-          "name": "Get Current User",
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('accessToken', '');",
+                  "    pm.collectionVariables.set('refreshToken', '');",
+                  "    console.log('✅ Logged out - tokens cleared');",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "GET",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{apiV1}}/auth/logout",
+              "host": ["{{apiV1}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout from current device"
+          }
+        },
+        {
+          "name": "Logout All Devices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('accessToken', '');",
+                  "    pm.collectionVariables.set('refreshToken', '');",
+                  "    console.log('✅ Logged out from all devices');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{apiV1}}/auth/me",
+              "raw": "{{apiV1}}/auth/logout-all",
               "host": ["{{apiV1}}"],
-              "path": ["auth", "me"]
-            }
+              "path": ["auth", "logout-all"]
+            },
+            "description": "Logout from all devices"
           }
         }
-      ]
+      ],
+      "description": "Authentication endpoints with automatic token management. Login or Register requests will automatically save accessToken and refreshToken to collection variables."
     },
     {
-      "name": "Users",
+      "name": "👤 Users",
       "item": [
         {
-          "name": "Get Profile",
+          "name": "Get My Profile",
           "request": {
             "method": "GET",
             "header": [],
@@ -303,11 +448,12 @@
               "raw": "{{apiV1}}/users/profile",
               "host": ["{{apiV1}}"],
               "path": ["users", "profile"]
-            }
+            },
+            "description": "Get current user's profile"
           }
         },
         {
-          "name": "Update Profile",
+          "name": "Update My Profile",
           "request": {
             "method": "PATCH",
             "header": [
@@ -318,17 +464,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\"\n}"
+              "raw": "{\n  \"name\": \"John Updated\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe Updated\",\n  \"phone\": \"+9876543210\",\n  \"avatar\": \"https://example.com/avatar.jpg\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/users/profile",
               "host": ["{{apiV1}}"],
               "path": ["users", "profile"]
-            }
+            },
+            "description": "Update current user's profile (email cannot be changed)"
           }
         },
         {
-          "name": "Get Users (Admin)",
+          "name": "Get All Users (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -352,16 +499,24 @@
                 },
                 {
                   "key": "role",
-                  "value": "",
-                  "disabled": true
+                  "value": "CUSTOMER",
+                  "disabled": true,
+                  "description": "Values: SUPER_ADMIN, ADMIN, CUSTOMER"
                 },
                 {
                   "key": "status",
-                  "value": "",
+                  "value": "active",
+                  "disabled": true,
+                  "description": "Values: active, inactive, blocked, pending_verification"
+                },
+                {
+                  "key": "emailVerified",
+                  "value": "true",
                   "disabled": true
                 }
               ]
-            }
+            },
+            "description": "Get all users with filters (Admin/Super Admin only)"
           }
         },
         {
@@ -373,7 +528,8 @@
               "raw": "{{apiV1}}/users/statistics",
               "host": ["{{apiV1}}"],
               "path": ["users", "statistics"]
-            }
+            },
+            "description": "Get user statistics by role and status (Admin/Super Admin only)"
           }
         },
         {
@@ -388,13 +544,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"Password123!\",\n  \"name\": \"New User\",\n  \"role\": \"CUSTOMER\"\n}"
+              "raw": "{\n  \"email\": \"newuser@test.com\",\n  \"password\": \"Password@123\",\n  \"firstName\": \"New\",\n  \"lastName\": \"User\",\n  \"role\": \"CUSTOMER\",\n  \"phone\": \"+1234567890\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/users",
               "host": ["{{apiV1}}"],
               "path": ["users"]
-            }
+            },
+            "description": "Create a new user (Admin/Super Admin only)"
           }
         },
         {
@@ -403,16 +560,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiV1}}/users/:id",
+              "raw": "{{apiV1}}/users/{{userId}}",
               "host": ["{{apiV1}}"],
-              "path": ["users", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "user-id"
-                }
-              ]
-            }
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Get user by ID (Owner or Admin)"
           }
         },
         {
@@ -427,7 +579,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@example.com\"\n}"
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Name\",\n  \"phone\": \"+9999999999\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/users/:id",
@@ -439,11 +591,12 @@
                   "value": "user-id"
                 }
               ]
-            }
+            },
+            "description": "Update user profile (Admin/Super Admin only)"
           }
         },
         {
-          "name": "Update User Role (Admin)",
+          "name": "Update User Role ⭐ (Super Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -454,7 +607,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"role\": \"SELLER\"\n}"
+              "raw": "{\n  \"role\": \"ADMIN\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/users/:id/role",
@@ -466,7 +619,8 @@
                   "value": "user-id"
                 }
               ]
-            }
+            },
+            "description": "Update user role - Super Admin can create ADMIN users. Available roles: SUPER_ADMIN, ADMIN, CUSTOMER"
           }
         },
         {
@@ -481,7 +635,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+              "raw": "{\n  \"status\": \"active\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/users/:id/status",
@@ -493,7 +647,8 @@
                   "value": "user-id"
                 }
               ]
-            }
+            },
+            "description": "Update user status. Available: active, inactive, blocked, pending_verification"
           }
         },
         {
@@ -511,16 +666,18 @@
                   "value": "user-id"
                 }
               ]
-            }
+            },
+            "description": "Soft delete user (Admin/Super Admin only)"
           }
         }
-      ]
+      ],
+      "description": "User management endpoints. Profile endpoints are accessible to the user themselves, admin endpoints require ADMIN or SUPER_ADMIN role."
     },
     {
-      "name": "Products",
+      "name": "📦 Products",
       "item": [
         {
-          "name": "Get Products",
+          "name": "Get All Products",
           "request": {
             "auth": {
               "type": "noauth"
@@ -557,16 +714,22 @@
                 },
                 {
                   "key": "inStock",
-                  "value": "",
+                  "value": "true",
                   "disabled": true
                 },
                 {
                   "key": "sortBy",
-                  "value": "",
+                  "value": "createdAt",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
                   "disabled": true
                 }
               ]
-            }
+            },
+            "description": "Get all products with filtering and pagination (Public)"
           }
         },
         {
@@ -578,16 +741,17 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiV1}}/products/search?q=laptop",
+              "raw": "{{apiV1}}/products/search?q=product",
               "host": ["{{apiV1}}"],
               "path": ["products", "search"],
               "query": [
                 {
                   "key": "q",
-                  "value": "laptop"
+                  "value": "product"
                 }
               ]
-            }
+            },
+            "description": "Search products by name or description"
           }
         },
         {
@@ -602,28 +766,8 @@
               "raw": "{{apiV1}}/products/featured",
               "host": ["{{apiV1}}"],
               "path": ["products", "featured"]
-            }
-          }
-        },
-        {
-          "name": "Get Product By Slug",
-          "request": {
-            "auth": {
-              "type": "noauth"
             },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/products/slug/:slug",
-              "host": ["{{apiV1}}"],
-              "path": ["products", "slug", ":slug"],
-              "variable": [
-                {
-                  "key": "slug",
-                  "value": "product-slug"
-                }
-              ]
-            }
+            "description": "Get featured products"
           }
         },
         {
@@ -644,32 +788,12 @@
                   "value": "product-id"
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "Get Related Products",
-          "request": {
-            "auth": {
-              "type": "noauth"
             },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/products/:id/related",
-              "host": ["{{apiV1}}"],
-              "path": ["products", ":id", "related"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "product-id"
-                }
-              ]
-            }
+            "description": "Get product details by ID"
           }
         },
         {
-          "name": "Create Product (Seller)",
+          "name": "Create Product (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -680,17 +804,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Product Name\",\n  \"description\": \"Product description\",\n  \"price\": 99.99,\n  \"category\": \"category-id\",\n  \"stock\": 100,\n  \"images\": [\"image-url-1\", \"image-url-2\"]\n}"
+              "raw": "{\n  \"name\": \"New Product\",\n  \"description\": \"Product description here\",\n  \"price\": 99.99,\n  \"category\": \"category-id\",\n  \"stock\": 100,\n  \"images\": [\"https://example.com/image1.jpg\"],\n  \"featured\": false\n}"
             },
             "url": {
               "raw": "{{apiV1}}/products",
               "host": ["{{apiV1}}"],
               "path": ["products"]
-            }
+            },
+            "description": "Create new product (Admin only)"
           }
         },
         {
-          "name": "Update Product (Seller)",
+          "name": "Update Product (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -701,7 +826,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Product Name\",\n  \"price\": 89.99\n}"
+              "raw": "{\n  \"name\": \"Updated Product Name\",\n  \"price\": 89.99,\n  \"stock\": 150\n}"
             },
             "url": {
               "raw": "{{apiV1}}/products/:id",
@@ -713,11 +838,12 @@
                   "value": "product-id"
                 }
               ]
-            }
+            },
+            "description": "Update product (Admin only)"
           }
         },
         {
-          "name": "Delete Product (Seller)",
+          "name": "Delete Product (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -731,98 +857,15 @@
                   "value": "product-id"
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "Add Variant (Seller)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Color: Red\",\n  \"price\": 109.99,\n  \"stock\": 50\n}"
             },
-            "url": {
-              "raw": "{{apiV1}}/products/:id/variants",
-              "host": ["{{apiV1}}"],
-              "path": ["products", ":id", "variants"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "product-id"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Variant (Seller)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"price\": 99.99,\n  \"stock\": 60\n}"
-            },
-            "url": {
-              "raw": "{{apiV1}}/products/:id/variants/:variantId",
-              "host": ["{{apiV1}}"],
-              "path": ["products", ":id", "variants", ":variantId"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "product-id"
-                },
-                {
-                  "key": "variantId",
-                  "value": "variant-id"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Stock (Seller)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"stock\": 150\n}"
-            },
-            "url": {
-              "raw": "{{apiV1}}/products/:id/stock",
-              "host": ["{{apiV1}}"],
-              "path": ["products", ":id", "stock"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "product-id"
-                }
-              ]
-            }
+            "description": "Delete product (Admin only)"
           }
         }
-      ]
+      ],
+      "description": "Product catalog endpoints. Public endpoints don't require authentication, Admin endpoints require ADMIN or SUPER_ADMIN role."
     },
     {
-      "name": "Cart",
+      "name": "🛒 Cart",
       "item": [
         {
           "name": "Get Cart",
@@ -842,7 +885,8 @@
               "raw": "{{apiV1}}/cart",
               "host": ["{{apiV1}}"],
               "path": ["cart"]
-            }
+            },
+            "description": "Get cart items (works for both authenticated users and guests with session ID)"
           }
         },
         {
@@ -871,7 +915,8 @@
               "raw": "{{apiV1}}/cart/items",
               "host": ["{{apiV1}}"],
               "path": ["cart", "items"]
-            }
+            },
+            "description": "Add item to cart"
           }
         },
         {
@@ -906,7 +951,8 @@
                   "value": "item-id"
                 }
               ]
-            }
+            },
+            "description": "Update cart item quantity"
           }
         },
         {
@@ -933,7 +979,8 @@
                   "value": "item-id"
                 }
               ]
-            }
+            },
+            "description": "Remove item from cart"
           }
         },
         {
@@ -954,32 +1001,12 @@
               "raw": "{{apiV1}}/cart",
               "host": ["{{apiV1}}"],
               "path": ["cart"]
-            }
-          }
-        },
-        {
-          "name": "Validate Cart",
-          "request": {
-            "auth": {
-              "type": "noauth"
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Session-ID",
-                "value": "{{sessionId}}",
-                "description": "For guest users"
-              }
-            ],
-            "url": {
-              "raw": "{{apiV1}}/cart/validate",
-              "host": ["{{apiV1}}"],
-              "path": ["cart", "validate"]
-            }
+            "description": "Clear all items from cart"
           }
         },
         {
-          "name": "Apply Discount",
+          "name": "Merge Carts (After Login)",
           "request": {
             "method": "POST",
             "header": [
@@ -990,52 +1017,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"discountCode\": \"SAVE20\"\n}"
-            },
-            "url": {
-              "raw": "{{apiV1}}/cart/discount",
-              "host": ["{{apiV1}}"],
-              "path": ["cart", "discount"]
-            }
-          }
-        },
-        {
-          "name": "Remove Discount",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/cart/discount",
-              "host": ["{{apiV1}}"],
-              "path": ["cart", "discount"]
-            }
-          }
-        },
-        {
-          "name": "Merge Carts",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"guestSessionId\": \"guest-session-id\"\n}"
+              "raw": "{\n  \"guestSessionId\": \"{{sessionId}}\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/cart/merge",
               "host": ["{{apiV1}}"],
               "path": ["cart", "merge"]
-            }
+            },
+            "description": "Merge guest cart with user cart after login"
           }
         }
-      ]
+      ],
+      "description": "Shopping cart endpoints. Supports both authenticated users and guest sessions."
     },
     {
-      "name": "Orders",
+      "name": "📋 Orders",
       "item": [
         {
           "name": "Create Order",
@@ -1049,13 +1045,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"shippingAddress\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zipCode\": \"10001\",\n    \"country\": \"USA\"\n  },\n  \"paymentMethod\": \"card\"\n}"
+              "raw": "{\n  \"shippingAddress\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"addressLine1\": \"123 Main St\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"postalCode\": \"10001\",\n    \"country\": \"USA\",\n    \"phone\": \"+1234567890\"\n  },\n  \"paymentMethod\": \"card\"\n}"
             },
             "url": {
               "raw": "{{apiV1}}/orders",
               "host": ["{{apiV1}}"],
               "path": ["orders"]
-            }
+            },
+            "description": "Create new order from cart"
           }
         },
         {
@@ -1075,41 +1072,10 @@
                 {
                   "key": "limit",
                   "value": "10"
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "Get Seller Orders",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/orders/seller-orders?page=1&limit=10",
-              "host": ["{{apiV1}}"],
-              "path": ["orders", "seller-orders"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
-            }
+            },
+            "description": "Get current user's orders"
           }
         },
         {
@@ -1129,31 +1095,10 @@
                 {
                   "key": "limit",
                   "value": "10"
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "customerId",
-                  "value": "",
-                  "disabled": true
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "Get Order Statistics",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/orders/statistics",
-              "host": ["{{apiV1}}"],
-              "path": ["orders", "statistics"]
-            }
+            },
+            "description": "Get all orders (Admin only)"
           }
         },
         {
@@ -1171,29 +1116,12 @@
                   "value": "order-id"
                 }
               ]
-            }
+            },
+            "description": "Get order details"
           }
         },
         {
-          "name": "Get Order By Number",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/orders/number/:orderNumber",
-              "host": ["{{apiV1}}"],
-              "path": ["orders", "number", ":orderNumber"],
-              "variable": [
-                {
-                  "key": "orderNumber",
-                  "value": "ORD-12345"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Order Status",
+          "name": "Update Order Status (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1216,7 +1144,8 @@
                   "value": "order-id"
                 }
               ]
-            }
+            },
+            "description": "Update order status (Admin only)"
           }
         },
         {
@@ -1243,44 +1172,15 @@
                   "value": "order-id"
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "Add Tracking (Seller)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"trackingNumber\": \"TRACK123456\",\n  \"carrier\": \"UPS\"\n}"
             },
-            "url": {
-              "raw": "{{apiV1}}/orders/:orderId/items/:itemId/tracking",
-              "host": ["{{apiV1}}"],
-              "path": ["orders", ":orderId", "items", ":itemId", "tracking"],
-              "variable": [
-                {
-                  "key": "orderId",
-                  "value": "order-id"
-                },
-                {
-                  "key": "itemId",
-                  "value": "item-id"
-                }
-              ]
-            }
+            "description": "Cancel order"
           }
         }
-      ]
+      ],
+      "description": "Order management endpoints"
     },
     {
-      "name": "Payments",
+      "name": "💳 Payments",
       "item": [
         {
           "name": "Create Payment Intent",
@@ -1300,7 +1200,8 @@
               "raw": "{{apiV1}}/payments/create-intent",
               "host": ["{{apiV1}}"],
               "path": ["payments", "create-intent"]
-            }
+            },
+            "description": "Create Stripe payment intent for order"
           }
         },
         {
@@ -1321,7 +1222,8 @@
               "raw": "{{apiV1}}/payments/confirm",
               "host": ["{{apiV1}}"],
               "path": ["payments", "confirm"]
-            }
+            },
+            "description": "Confirm payment"
           }
         },
         {
@@ -1339,38 +1241,12 @@
                   "value": "order-id"
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "Refund Payment (Admin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 99.99,\n  \"reason\": \"Customer request\"\n}"
             },
-            "url": {
-              "raw": "{{apiV1}}/payments/:orderId/refund",
-              "host": ["{{apiV1}}"],
-              "path": ["payments", ":orderId", "refund"],
-              "variable": [
-                {
-                  "key": "orderId",
-                  "value": "order-id"
-                }
-              ]
-            }
+            "description": "Get payment details for order"
           }
         },
         {
-          "name": "Webhook",
+          "name": "Webhook (Stripe)",
           "request": {
             "auth": {
               "type": "noauth"
@@ -1394,13 +1270,15 @@
               "raw": "{{apiV1}}/payments/webhook",
               "host": ["{{apiV1}}"],
               "path": ["payments", "webhook"]
-            }
+            },
+            "description": "Stripe webhook endpoint"
           }
         }
-      ]
+      ],
+      "description": "Payment processing endpoints (Stripe integration)"
     },
     {
-      "name": "Shipping",
+      "name": "🚚 Shipping",
       "item": [
         {
           "name": "Track Shipment (Public)",
@@ -1420,7 +1298,8 @@
                   "value": "TRACK123456"
                 }
               ]
-            }
+            },
+            "description": "Track shipment by tracking number (Public)"
           }
         },
         {
@@ -1445,11 +1324,12 @@
                   "value": "2"
                 }
               ]
-            }
+            },
+            "description": "Get shipping rates (Public)"
           }
         },
         {
-          "name": "Create Shipment (Seller)",
+          "name": "Create Shipment (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -1466,121 +1346,15 @@
               "raw": "{{apiV1}}/shipping",
               "host": ["{{apiV1}}"],
               "path": ["shipping"]
-            }
-          }
-        },
-        {
-          "name": "Get All Shipments",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/shipping?page=1&limit=10",
-              "host": ["{{apiV1}}"],
-              "path": ["shipping"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Shipments By Order",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/shipping/order/:orderId",
-              "host": ["{{apiV1}}"],
-              "path": ["shipping", "order", ":orderId"],
-              "variable": [
-                {
-                  "key": "orderId",
-                  "value": "order-id"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Shipment By ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/shipping/:shipmentId",
-              "host": ["{{apiV1}}"],
-              "path": ["shipping", ":shipmentId"],
-              "variable": [
-                {
-                  "key": "shipmentId",
-                  "value": "shipment-id"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Shipment Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"IN_TRANSIT\"\n}"
             },
-            "url": {
-              "raw": "{{apiV1}}/shipping/:shipmentId/status",
-              "host": ["{{apiV1}}"],
-              "path": ["shipping", ":shipmentId", "status"],
-              "variable": [
-                {
-                  "key": "shipmentId",
-                  "value": "shipment-id"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Cancel Shipment",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{apiV1}}/shipping/:shipmentId/cancel",
-              "host": ["{{apiV1}}"],
-              "path": ["shipping", ":shipmentId", "cancel"],
-              "variable": [
-                {
-                  "key": "shipmentId",
-                  "value": "shipment-id"
-                }
-              ]
-            }
+            "description": "Create shipment (Admin only)"
           }
         }
-      ]
+      ],
+      "description": "Shipping and tracking endpoints"
     },
     {
-      "name": "Support",
+      "name": "💬 Support",
       "item": [
         {
           "name": "AI Chat",
@@ -1596,6 +1370,7 @@
                       "    const response = pm.response.json();",
                       "    if (response.data && response.data.sessionId) {",
                       "        pm.collectionVariables.set('sessionId', response.data.sessionId);",
+                      "        console.log('✅ Chat session ID saved:', response.data.sessionId);",
                       "    }",
                       "}"
                     ]
@@ -1626,7 +1401,8 @@
                   "raw": "{{apiV1}}/support/chat",
                   "host": ["{{apiV1}}"],
                   "path": ["support", "chat"]
-                }
+                },
+                "description": "Send message to AI support chat"
               }
             },
             {
@@ -1647,28 +1423,8 @@
                       "value": "{{sessionId}}"
                     }
                   ]
-                }
-              }
-            },
-            {
-              "name": "Close Chat Session",
-              "request": {
-                "auth": {
-                  "type": "noauth"
                 },
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "{{apiV1}}/support/chat/:sessionId/close",
-                  "host": ["{{apiV1}}"],
-                  "path": ["support", "chat", ":sessionId", "close"],
-                  "variable": [
-                    {
-                      "key": "sessionId",
-                      "value": "{{sessionId}}"
-                    }
-                  ]
-                }
+                "description": "Get chat history for session"
               }
             }
           ]
@@ -1688,13 +1444,14 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"subject\": \"Issue with order\",\n  \"description\": \"I have a problem with my recent order\",\n  \"priority\": \"MEDIUM\",\n  \"category\": \"ORDER_ISSUE\"\n}"
+                  "raw": "{\n  \"subject\": \"Issue with my order\",\n  \"description\": \"I have a problem with my recent order #12345\",\n  \"priority\": \"MEDIUM\",\n  \"category\": \"ORDER_ISSUE\"\n}"
                 },
                 "url": {
                   "raw": "{{apiV1}}/support/tickets",
                   "host": ["{{apiV1}}"],
                   "path": ["support", "tickets"]
-                }
+                },
+                "description": "Create support ticket"
               }
             },
             {
@@ -1706,11 +1463,12 @@
                   "raw": "{{apiV1}}/support/tickets/my-tickets",
                   "host": ["{{apiV1}}"],
                   "path": ["support", "tickets", "my-tickets"]
-                }
+                },
+                "description": "Get current user's tickets"
               }
             },
             {
-              "name": "Get All Tickets (Admin/Support)",
+              "name": "Get All Tickets (Admin)",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1726,31 +1484,10 @@
                     {
                       "key": "limit",
                       "value": "10"
-                    },
-                    {
-                      "key": "status",
-                      "value": "",
-                      "disabled": true
-                    },
-                    {
-                      "key": "priority",
-                      "value": "",
-                      "disabled": true
                     }
                   ]
-                }
-              }
-            },
-            {
-              "name": "Get Ticket Statistics",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{apiV1}}/support/tickets/statistics",
-                  "host": ["{{apiV1}}"],
-                  "path": ["support", "tickets", "statistics"]
-                }
+                },
+                "description": "Get all support tickets (Admin only)"
               }
             },
             {
@@ -1768,25 +1505,8 @@
                       "value": "ticket-id"
                     }
                   ]
-                }
-              }
-            },
-            {
-              "name": "Get Ticket By Number",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{apiV1}}/support/tickets/number/:ticketNumber",
-                  "host": ["{{apiV1}}"],
-                  "path": ["support", "tickets", "number", ":ticketNumber"],
-                  "variable": [
-                    {
-                      "key": "ticketNumber",
-                      "value": "TKT-12345"
-                    }
-                  ]
-                }
+                },
+                "description": "Get ticket details"
               }
             },
             {
@@ -1813,93 +1533,50 @@
                       "value": "ticket-id"
                     }
                   ]
-                }
-              }
-            },
-            {
-              "name": "Update Ticket Status (Admin/Support)",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
                 },
-                "url": {
-                  "raw": "{{apiV1}}/support/tickets/:ticketId/status",
-                  "host": ["{{apiV1}}"],
-                  "path": ["support", "tickets", ":ticketId", "status"],
-                  "variable": [
-                    {
-                      "key": "ticketId",
-                      "value": "ticket-id"
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "name": "Assign Ticket (Admin/Support)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"agentId\": \"agent-user-id\"\n}"
-                },
-                "url": {
-                  "raw": "{{apiV1}}/support/tickets/:ticketId/assign",
-                  "host": ["{{apiV1}}"],
-                  "path": ["support", "tickets", ":ticketId", "assign"],
-                  "variable": [
-                    {
-                      "key": "ticketId",
-                      "value": "ticket-id"
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "name": "Update Ticket Priority (Admin/Support)",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"priority\": \"HIGH\"\n}"
-                },
-                "url": {
-                  "raw": "{{apiV1}}/support/tickets/:ticketId/priority",
-                  "host": ["{{apiV1}}"],
-                  "path": ["support", "tickets", ":ticketId", "priority"],
-                  "variable": [
-                    {
-                      "key": "ticketId",
-                      "value": "ticket-id"
-                    }
-                  ]
-                }
+                "description": "Add message/reply to ticket"
               }
             }
           ]
         }
-      ]
+      ],
+      "description": "Customer support endpoints (AI chat and tickets)"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "// Check if we have an accessToken",
+          "const accessToken = pm.collectionVariables.get('accessToken');",
+          "if (accessToken) {",
+          "    console.log('🔑 Using access token for authentication');",
+          "} else {",
+          "    console.log('⚠️  No access token found. Login first.');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "if (pm.response.code === 401) {",
+          "    console.log('❌ Authentication failed - Access token may be expired');",
+          "    console.log('💡 Use the Refresh Token request or Login again');",
+          "}",
+          "",
+          "if (pm.response.code === 403) {",
+          "    console.log('❌ Forbidden - You don\\'t have permission for this action');",
+          "    console.log('💡 This endpoint requires specific role (ADMIN or SUPER_ADMIN)');",
+          "}"
+        ]
+      }
     }
   ]
 }

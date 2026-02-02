@@ -10,7 +10,7 @@ import {
 } from "../repositories/user.repository.js";
 import {
   IUser,
-  UserRole,
+  Role,
   UserStatus,
   PaginatedResult,
   PaginationOptions,
@@ -29,15 +29,17 @@ export interface CreateUserInput {
   password: string;
   firstName: string;
   lastName: string;
-  role?: UserRole;
+  role?: Role;
   phone?: string;
 }
 
 export interface UpdateUserInput {
+  name?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
   avatar?: string;
+  // Note: email is intentionally excluded - users cannot change their email
 }
 
 class UserService {
@@ -59,7 +61,7 @@ class UserService {
       password: input.password,
       firstName: input.firstName,
       lastName: input.lastName,
-      role: input.role || UserRole.CUSTOMER,
+      role: input.role || Role.CUSTOMER,
       phone: input.phone,
     });
 
@@ -103,7 +105,14 @@ class UserService {
    * Update user profile
    */
   async updateProfile(id: string, input: UpdateUserInput): Promise<IUser> {
-    const user = await userRepository.updateById(id, input);
+    // Remove email from input if somehow included (security measure)
+    const { email, ...safeInput } = input as any;
+
+    if (email !== undefined) {
+      logger.warn(`Attempt to update email blocked for user: ${id}`);
+    }
+
+    const user = await userRepository.updateById(id, safeInput);
     if (!user) {
       throw new NotFoundError("User");
     }
@@ -111,14 +120,14 @@ class UserService {
     // Invalidate cache
     await this.invalidateCache(id);
 
-    logger.info(`User updated: ${user.email}`);
+    logger.info(`User profile updated: ${user.email}`);
     return user;
   }
 
   /**
    * Update user role (admin only)
    */
-  async updateRole(id: string, role: UserRole): Promise<IUser> {
+  async updateRole(id: string, role: Role): Promise<IUser> {
     const user = await userRepository.updateById(id, { role });
     if (!user) {
       throw new NotFoundError("User");
@@ -182,7 +191,7 @@ class UserService {
   /**
    * Get users by role
    */
-  async getByRole(role: UserRole): Promise<IUser[]> {
+  async getByRole(role: Role): Promise<IUser[]> {
     return userRepository.findByRole(role);
   }
 

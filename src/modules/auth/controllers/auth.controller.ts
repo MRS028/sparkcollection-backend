@@ -106,9 +106,22 @@ export const login = asyncHandler(
  */
 export const refreshToken = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
-    // Get refresh token from cookie or body
-    const token =
-      req.cookies?.refreshToken || (req.body as RefreshTokenInput).refreshToken;
+    // Get refresh token from Authorization header (Bearer token), cookie, or body (fallback)
+    let token: string | undefined;
+
+    // First priority: Authorization header
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+
+    // Fallback to cookie or body
+    if (!token) {
+      token =
+        req.cookies?.refreshToken ||
+        (req.body as RefreshTokenInput).refreshToken;
+    }
+
     const ipAddress = getClientIp(req);
     const userAgent = req.headers["user-agent"];
 
@@ -121,6 +134,7 @@ export const refreshToken = asyncHandler(
       res,
       {
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         expiresAt: tokens.accessTokenExpiresAt,
       },
       { message: "Token refreshed successfully" },

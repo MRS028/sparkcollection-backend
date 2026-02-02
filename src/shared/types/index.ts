@@ -4,8 +4,18 @@
 
 import { Request } from "express";
 import { Document, Types } from "mongoose";
+import {
+  Role,
+  UserStatus,
+} from "../../modules/user/interfaces/user.interface.js";
 
-// User Roles
+// Re-export Role and UserStatus from user module for consistency
+export {
+  Role,
+  UserStatus,
+} from "../../modules/user/interfaces/user.interface.js";
+
+// User Roles (deprecated - use Role from user module)
 export enum UserRole {
   ADMIN = "admin",
   SELLER = "seller",
@@ -13,8 +23,8 @@ export enum UserRole {
   SUPPORT_AGENT = "support_agent",
 }
 
-// User Status
-export enum UserStatus {
+// User Status (deprecated - use UserStatus from user module)
+export enum OldUserStatus {
   ACTIVE = "active",
   INACTIVE = "inactive",
   SUSPENDED = "suspended",
@@ -28,7 +38,7 @@ export interface IUser extends Document {
   password: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
+  role: Role;
   status: UserStatus;
   phone?: string;
   avatar?: string;
@@ -46,7 +56,7 @@ export interface IUser extends Document {
 export interface JwtPayload {
   userId: string;
   email: string;
-  role: UserRole;
+  role: Role;
   tenantId?: string;
   iat?: number;
   exp?: number;

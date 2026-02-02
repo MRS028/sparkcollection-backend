@@ -7,14 +7,14 @@ import { FilterQuery, UpdateQuery, Types } from "mongoose";
 import { User } from "../models/User.model.js";
 import {
   IUser,
-  UserRole,
+  Role,
   UserStatus,
   PaginatedResult,
   PaginationOptions,
 } from "../../../shared/types/index.js";
 
 export interface UserFilters {
-  role?: UserRole;
+  role?: Role;
   status?: UserStatus;
   emailVerified?: boolean;
   search?: string;
@@ -27,7 +27,7 @@ class UserRepository {
    */
   async create(userData: Partial<IUser>): Promise<IUser> {
     const user = new User(userData);
-    return user.save();
+    return (await user.save()) as unknown as IUser;
   }
 
   /**
@@ -57,7 +57,7 @@ class UserRepository {
    * Find user by email with password
    */
   async findByEmailWithPassword(email: string): Promise<IUser | null> {
-    return User.findByEmail(email);
+    return User.findOne({ email: email.toLowerCase() }).select("+password");
   }
 
   /**
@@ -143,7 +143,7 @@ class UserRepository {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: users,
+      data: users as unknown as IUser[],
       pagination: {
         page,
         limit,
@@ -158,8 +158,8 @@ class UserRepository {
   /**
    * Find users by role
    */
-  async findByRole(role: UserRole): Promise<IUser[]> {
-    return User.findByRole(role);
+  async findByRole(role: Role): Promise<IUser[]> {
+    return User.find({ role });
   }
 
   /**
@@ -213,7 +213,7 @@ class UserRepository {
    */
   async getStatistics(tenantId?: string): Promise<{
     total: number;
-    byRole: Record<UserRole, number>;
+    byRole: Record<Role, number>;
     byStatus: Record<UserStatus, number>;
     newThisMonth: number;
   }> {
@@ -234,14 +234,14 @@ class UserRepository {
 
   private async countByRole(
     baseFilter: FilterQuery<IUser>,
-  ): Promise<Record<UserRole, number>> {
+  ): Promise<Record<Role, number>> {
     const result = await User.aggregate([
       { $match: baseFilter },
       { $group: { _id: "$role", count: { $sum: 1 } } },
     ]);
 
-    const counts = {} as Record<UserRole, number>;
-    for (const role of Object.values(UserRole)) {
+    const counts = {} as Record<Role, number>;
+    for (const role of Object.values(Role)) {
       const found = result.find((r) => r._id === role);
       counts[role] = found ? found.count : 0;
     }

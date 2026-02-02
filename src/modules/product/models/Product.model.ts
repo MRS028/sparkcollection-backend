@@ -196,6 +196,7 @@ const productSchema = new Schema<IProduct>(
     slug: {
       type: String,
       unique: true,
+      sparse: true, // Allows multiple null values
       lowercase: true,
       index: true,
     },

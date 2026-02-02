@@ -21,6 +21,7 @@ import {
   UpdateRoleInput,
   UpdateStatusInput,
 } from "../validators/user.validator.js";
+import { setAuthCookie, clearAuthCookies } from "../cookies/setCookies.js";
 
 /**
  * @route   POST /api/v1/users
@@ -182,9 +183,9 @@ export const getProfile = asyncHandler(
 export const updateProfile = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user!.userId;
+    console.log("Updating profile for user ID:", userId);
     const input: UpdateProfileInput = req.body;
     const user = await userService.updateProfile(userId, input);
-
     sendSuccess(res, { user }, { message: "Profile updated successfully" });
   },
 );
