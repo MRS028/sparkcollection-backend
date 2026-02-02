@@ -793,6 +793,50 @@
           }
         },
         {
+          "name": "Get Product By Slug",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/products/slug/:slug",
+              "host": ["{{apiV1}}"],
+              "path": ["products", "slug", ":slug"],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "product-slug"
+                }
+              ]
+            },
+            "description": "Get product details by slug"
+          }
+        },
+        {
+          "name": "Get Related Products",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/products/:id/related",
+              "host": ["{{apiV1}}"],
+              "path": ["products", ":id", "related"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "product-id"
+                }
+              ]
+            },
+            "description": "Get related products for a product"
+          }
+        },
+        {
           "name": "Create Product (Admin)",
           "request": {
             "method": "POST",
@@ -1006,6 +1050,63 @@
           }
         },
         {
+          "name": "Validate Cart",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Session-ID",
+                "value": "{{sessionId}}",
+                "description": "For guest users"
+              }
+            ],
+            "url": {
+              "raw": "{{apiV1}}/cart/validate",
+              "host": ["{{apiV1}}"],
+              "path": ["cart", "validate"]
+            },
+            "description": "Validate cart (check stock availability and prices)"
+          }
+        },
+        {
+          "name": "Apply Discount Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DISCOUNT10\"\n}"
+            },
+            "url": {
+              "raw": "{{apiV1}}/cart/discount",
+              "host": ["{{apiV1}}"],
+              "path": ["cart", "discount"]
+            },
+            "description": "Apply discount code to cart (authenticated users only)"
+          }
+        },
+        {
+          "name": "Remove Discount Code",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/cart/discount",
+              "host": ["{{apiV1}}"],
+              "path": ["cart", "discount"]
+            },
+            "description": "Remove discount code from cart (authenticated users only)"
+          }
+        },
+        {
           "name": "Merge Carts (After Login)",
           "request": {
             "method": "POST",
@@ -1079,6 +1180,29 @@
           }
         },
         {
+          "name": "Get Seller Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/orders/seller-orders?page=1&limit=10",
+              "host": ["{{apiV1}}"],
+              "path": ["orders", "seller-orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get seller's orders (Seller only)"
+          }
+        },
+        {
           "name": "Get All Orders (Admin)",
           "request": {
             "method": "GET",
@@ -1099,6 +1223,19 @@
               ]
             },
             "description": "Get all orders (Admin only)"
+          }
+        },
+        {
+          "name": "Get Order Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/orders/statistics",
+              "host": ["{{apiV1}}"],
+              "path": ["orders", "statistics"]
+            },
+            "description": "Get order statistics (Admin/Seller only)"
           }
         },
         {
@@ -1329,7 +1466,7 @@
           }
         },
         {
-          "name": "Create Shipment (Admin)",
+          "name": "Create Shipment (Seller)",
           "request": {
             "method": "POST",
             "header": [
@@ -1347,7 +1484,96 @@
               "host": ["{{apiV1}}"],
               "path": ["shipping"]
             },
-            "description": "Create shipment (Admin only)"
+            "description": "Create shipment (Seller only)"
+          }
+        },
+        {
+          "name": "Get All Shipments (Admin/Seller)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/shipping?page=1&limit=10",
+              "host": ["{{apiV1}}"],
+              "path": ["shipping"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get all shipments (Admin sees all, Seller sees own)"
+          }
+        },
+        {
+          "name": "Get Shipments by Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/shipping/order/:orderId",
+              "host": ["{{apiV1}}"],
+              "path": ["shipping", "order", ":orderId"],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "order-id"
+                }
+              ]
+            },
+            "description": "Get shipments for a specific order"
+          }
+        },
+        {
+          "name": "Get Shipment By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/shipping/:shipmentId",
+              "host": ["{{apiV1}}"],
+              "path": ["shipping", ":shipmentId"],
+              "variable": [
+                {
+                  "key": "shipmentId",
+                  "value": "shipment-id"
+                }
+              ]
+            },
+            "description": "Get shipment details by ID"
+          }
+        },
+        {
+          "name": "Update Shipment Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_TRANSIT\"\n}"
+            },
+            "url": {
+              "raw": "{{apiV1}}/shipping/:shipmentId/status",
+              "host": ["{{apiV1}}"],
+              "path": ["shipping", ":shipmentId", "status"],
+              "variable": [
+                {
+                  "key": "shipmentId",
+                  "value": "shipment-id"
+                }
+              ]
+            },
+            "description": "Update shipment status (Admin/Seller only)"
           }
         }
       ],
@@ -1426,6 +1652,28 @@
                 },
                 "description": "Get chat history for session"
               }
+            },
+            {
+              "name": "Close Chat Session",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{apiV1}}/support/chat/:sessionId/close",
+                  "host": ["{{apiV1}}"],
+                  "path": ["support", "chat", ":sessionId", "close"],
+                  "variable": [
+                    {
+                      "key": "sessionId",
+                      "value": "{{sessionId}}"
+                    }
+                  ]
+                },
+                "description": "Close chat session"
+              }
             }
           ]
         },
@@ -1468,7 +1716,7 @@
               }
             },
             {
-              "name": "Get All Tickets (Admin)",
+              "name": "Get All Tickets (Admin/Support)",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1487,7 +1735,20 @@
                     }
                   ]
                 },
-                "description": "Get all support tickets (Admin only)"
+                "description": "Get all support tickets (Admin/Support Agent only)"
+              }
+            },
+            {
+              "name": "Get Ticket Statistics",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{apiV1}}/support/tickets/statistics",
+                  "host": ["{{apiV1}}"],
+                  "path": ["support", "tickets", "statistics"]
+                },
+                "description": "Get ticket statistics (Admin/Support Agent only)"
               }
             },
             {

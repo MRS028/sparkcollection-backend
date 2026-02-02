@@ -104,6 +104,36 @@ class ProductService {
   private readonly cacheTTL = 300; // 5 minutes
 
   /**
+   * Find or create category by name - Simplified
+   */
+  private async findOrCreateCategory(
+    categoryInput: string,
+    tenantId: string,
+  ): Promise<Types.ObjectId> {
+    // Always treat input as category name for simplicity
+    const name = categoryInput.trim();
+
+    // Find existing category by name (case-insensitive)
+    let category = await Category.findOne({
+      name: { $regex: new RegExp(`^${name}$`, "i") },
+      tenantId,
+    });
+
+    // Auto-create if not found
+    if (!category) {
+      category = await Category.create({
+        name,
+        tenantId,
+        isActive: true,
+        level: 0,
+      });
+      logger.info(`✅ Auto-created category: ${category.name}`);
+    }
+
+    return category._id;
+  }
+
+  /**
    * Create a new product
    */
   async create(input: CreateProductInput): Promise<IProduct> {
@@ -113,33 +143,23 @@ class ProductService {
       throw new ConflictError("SKU already exists");
     }
 
-    // Verify category exists
-    const category = await Category.findById(input.category);
-    if (!category) {
-      throw new BadRequestError("Category not found");
-    }
-
-    // Verify subcategory if provided
-    if (input.subcategory) {
-      const subcategory = await Category.findById(input.subcategory);
-      if (!subcategory || subcategory.parent?.toString() !== input.category) {
-        throw new BadRequestError("Invalid subcategory");
-      }
-    }
+    // Auto-create/find category from name
+    const categoryId = await this.findOrCreateCategory(
+      input.category,
+      input.tenantId,
+    );
 
     const product = await Product.create({
       ...input,
       sku: input.sku.toUpperCase(),
-      category: new Types.ObjectId(input.category),
-      subcategory: input.subcategory
-        ? new Types.ObjectId(input.subcategory)
-        : undefined,
+      category: categoryId,
+      subcategory: undefined, // Keep it simple - no subcategories
       sellerId: new Types.ObjectId(input.sellerId),
       status: ProductStatus.DRAFT,
     });
 
     // Update category product count
-    await Category.findByIdAndUpdate(input.category, {
+    await Category.findByIdAndUpdate(categoryId, {
       $inc: { productCount: 1 },
     });
 
@@ -236,7 +256,11 @@ class ProductService {
     }
 
     // Update category count if category changed
-    if (input.category && product.category && input.category !== product.category.toString()) {
+    if (
+      input.category &&
+      product.category &&
+      input.category !== product.category.toString()
+    ) {
       await Promise.all([
         Category.findByIdAndUpdate(product.category, {
           $inc: { productCount: -1 },

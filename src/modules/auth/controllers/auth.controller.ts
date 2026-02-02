@@ -4,7 +4,8 @@
  */
 
 import { Response, NextFunction } from "express";
-import { AuthRequest } from "../../../shared/types/index.js";
+// import { Role } from "@prisma/client";
+import { AuthRequest, Role } from "../../../shared/types/index.js";
 import { authService } from "../services/auth.service.js";
 import {
   sendSuccess,
@@ -50,7 +51,7 @@ export const register = asyncHandler(
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone,
-        role: input.role,
+        role: input.role as Role | undefined,
       },
       ipAddress,
       userAgent,
@@ -63,8 +64,11 @@ export const register = asyncHandler(
       res,
       {
         user: result.user,
-        accessToken: result.tokens.accessToken,
-        expiresAt: result.tokens.accessTokenExpiresAt,
+        tokens: {
+          accessToken: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken,
+          expiresAt: result.tokens.accessTokenExpiresAt,
+        },
       },
       "Registration successful",
     );
@@ -91,8 +95,11 @@ export const login = asyncHandler(
       res,
       {
         user: result.user,
-        accessToken: result.tokens.accessToken,
-        expiresAt: result.tokens.accessTokenExpiresAt,
+        tokens: {
+          accessToken: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken,
+          expiresAt: result.tokens.accessTokenExpiresAt,
+        },
       },
       { message: "Login successful" },
     );
@@ -120,6 +127,10 @@ export const refreshToken = asyncHandler(
       token =
         req.cookies?.refreshToken ||
         (req.body as RefreshTokenInput).refreshToken;
+    }
+
+    if (!token) {
+      throw new Error("Refresh token is required");
     }
 
     const ipAddress = getClientIp(req);

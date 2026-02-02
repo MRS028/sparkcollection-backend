@@ -22,12 +22,12 @@ import { NotFoundError } from "./shared/errors/index.js";
 import { authRoutes } from "./modules/auth/index.js";
 import { userRoutes } from "./modules/user/index.js";
 import { productRoutes } from "./modules/product/index.js";
+import categoryRoutes from "./modules/product/routes/category.routes.js";
 import { cartRoutes } from "./modules/cart/index.js";
 import { orderRoutes } from "./modules/order/index.js";
 import { shippingRoutes } from "./modules/shipping/routes/shipping.routes.js";
 import { paymentRoutes } from "./modules/payment/routes/payment.routes.js";
 import { supportRoutes } from "./modules/support/routes/support.routes.js";
-
 
 /**
  * Create and configure Express application
@@ -162,6 +162,9 @@ export function createApp(): Application {
   // Product routes
   app.use(`${apiV1}/products`, productRoutes);
 
+  // Category routes
+  app.use(`${apiV1}/categories`, categoryRoutes);
+
   // Cart routes
   app.use(`${apiV1}/cart`, cartRoutes);
 
@@ -189,6 +192,7 @@ export function createApp(): Application {
         auth: `${apiV1}/auth`,
         users: `${apiV1}/users`,
         products: `${apiV1}/products`,
+        categories: `${apiV1}/categories`,
         cart: `${apiV1}/cart`,
         orders: `${apiV1}/orders`,
         payments: `${apiV1}/payments`,
@@ -212,4 +216,3 @@ export function createApp(): Application {
 }
 
 export default createApp;
-

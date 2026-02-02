@@ -53,8 +53,8 @@ export const createProductSchema = z.object({
   basePrice: z.number().min(0, "Price must be non-negative"),
   compareAtPrice: z.number().min(0).optional(),
   costPrice: z.number().min(0).optional(),
-  category: objectIdSchema,
-  subcategory: objectIdSchema.optional(),
+  category: z.string().min(1, "Category is required"), // ✅ Accept category name or ObjectId
+  subcategory: z.string().optional(), // ✅ Simplified
   brand: z.string().max(100).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   variants: z.array(variantSchema).optional(),
