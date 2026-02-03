@@ -12,6 +12,7 @@ import {
 } from "../../../shared/errors/index.js";
 import { redis } from "../../../config/redis.js";
 import { logger } from "../../../shared/utils/logger.js";
+import { couponService } from "../../coupon/services/coupon.service.js";
 
 export interface AddToCartInput {
   productId: string;
@@ -329,18 +330,37 @@ class CartService {
   ): Promise<ICart> {
     const cart = await this.getOrCreateCart(userId, sessionId, tenantId);
 
-    // TODO: Implement coupon validation and discount calculation
-    // This would involve checking coupon validity, usage limits, minimum order, etc.
+    // Prepare cart items for validation
+    const cartItems = cart.items.map((item) => ({
+      productId: item.productId.toString(),
+      categoryId: undefined, // TODO: Add category tracking to cart items if needed
+    }));
 
-    // Placeholder discount logic
-    const discountPercent = 10; // Example: 10% discount
-    cart.discount =
-      Math.round(cart.subtotal * (discountPercent / 100) * 100) / 100;
+    // Validate coupon
+    const validation = await couponService.validateCoupon(
+      {
+        code,
+        userId,
+        cartAmount: cart.subtotal,
+        cartItems,
+      },
+      tenantId,
+    );
+
+    if (!validation.isValid) {
+      throw new BadRequestError(
+        validation.message || "Invalid or expired coupon code",
+      );
+    }
+
+    // Apply discount
+    cart.discount = validation.discount;
     cart.discountCode = code;
 
     await cart.save();
     await this.invalidateCache(userId, sessionId);
 
+    logger.info(`Discount applied: ${code} - ₹${validation.discount}`);
     return cart;
   }
 

@@ -24,6 +24,7 @@ import { userRoutes } from "./modules/user/index.js";
 import { productRoutes } from "./modules/product/index.js";
 import categoryRoutes from "./modules/product/routes/category.routes.js";
 import { cartRoutes } from "./modules/cart/index.js";
+import { couponRoutes } from "./modules/coupon/index.js";
 import { orderRoutes } from "./modules/order/index.js";
 import { shippingRoutes } from "./modules/shipping/routes/shipping.routes.js";
 import { paymentRoutes } from "./modules/payment/routes/payment.routes.js";
@@ -168,6 +169,9 @@ export function createApp(): Application {
   // Cart routes
   app.use(`${apiV1}/cart`, cartRoutes);
 
+  // Coupon routes
+  app.use(`${apiV1}/coupons`, couponRoutes);
+
   // Order routes
   app.use(`${apiV1}/orders`, orderRoutes);
 
@@ -194,6 +198,7 @@ export function createApp(): Application {
         products: `${apiV1}/products`,
         categories: `${apiV1}/categories`,
         cart: `${apiV1}/cart`,
+        coupons: `${apiV1}/coupons`,
         orders: `${apiV1}/orders`,
         payments: `${apiV1}/payments`,
         shipping: `${apiV1}/shipping`,
