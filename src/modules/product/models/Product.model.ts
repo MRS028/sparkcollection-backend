@@ -5,6 +5,7 @@
 
 import mongoose, { Schema, Document, Types, Model } from "mongoose";
 import slugify from "slugify";
+import { InventoryMovement, InventoryMovementType } from "./Inventory.model.js";
 
 // Product Status
 export enum ProductStatus {
@@ -358,6 +359,124 @@ productSchema.pre("save", async function (next) {
     }
 
     this.slug = slug;
+  }
+
+  // Track inventory movements for stock changes
+  if (!this.isNew && this.isModified("variants")) {
+    console.log(`🔍 Pre-save hook triggered - variants modified`);
+    const originalDoc = await (this.constructor as Model<IProduct>).findById(
+      this._id,
+    );
+
+    if (
+      originalDoc &&
+      originalDoc.variants &&
+      originalDoc.variants.length > 0
+    ) {
+      console.log(`🔍 Found ${originalDoc.variants.length} original variants`);
+
+      // Check each variant for stock changes - match by both _id and SKU
+      for (const newVariant of this.variants) {
+        let oldVariant;
+
+        // Try to match by _id first, then by SKU
+        if (newVariant._id) {
+          oldVariant = originalDoc.variants.find(
+            (v) => v._id?.toString() === newVariant._id?.toString(),
+          );
+          console.log(
+            `🔍 Matching by _id: ${newVariant._id} - Found: ${!!oldVariant}`,
+          );
+        } else {
+          // Match by SKU if no _id (for cases where _id isn't sent in update)
+          oldVariant = originalDoc.variants.find(
+            (v) => v.sku === newVariant.sku,
+          );
+          console.log(
+            `🔍 Matching by SKU: ${newVariant.sku} - Found: ${!!oldVariant}`,
+          );
+        }
+
+        if (oldVariant) {
+          console.log(
+            `🔍 Old stock: ${oldVariant.stock}, New stock: ${newVariant.stock}`,
+          );
+
+          if (oldVariant.stock !== newVariant.stock) {
+            const stockDiff = newVariant.stock - oldVariant.stock;
+
+            // Find the most recent inventory movement for this variant
+            const latestMovement = await InventoryMovement.findOne({
+              productId: this._id,
+              variantId: oldVariant._id,
+            }).sort({ createdAt: -1 });
+
+            if (latestMovement) {
+              // Update the existing movement
+              await InventoryMovement.findByIdAndUpdate(latestMovement._id, {
+                quantity: Math.abs(stockDiff),
+                previousStock: oldVariant.stock,
+                newStock: newVariant.stock,
+                notes: `Variant stock ${stockDiff > 0 ? "increased" : "decreased"} by ${Math.abs(stockDiff)} via product update`,
+              });
+              console.log(
+                `✅ Updated inventory movement for ${newVariant.sku}: qty=${Math.abs(stockDiff)}, ${oldVariant.stock} → ${newVariant.stock}`,
+              );
+            } else {
+              // Create new movement if none exists
+              await InventoryMovement.create({
+                productId: this._id,
+                variantId: oldVariant._id,
+                sku: newVariant.sku,
+                type: InventoryMovementType.ADJUSTMENT,
+                quantity: Math.abs(stockDiff),
+                previousStock: oldVariant.stock,
+                newStock: newVariant.stock,
+                notes: `Variant stock ${stockDiff > 0 ? "increased" : "decreased"} by ${Math.abs(stockDiff)} via product update`,
+                createdBy: (this as any).updatedBy || this.sellerId,
+                tenantId: this.tenantId,
+              });
+              console.log(
+                `✅ Created inventory movement for ${newVariant.sku}: qty=${Math.abs(stockDiff)}, ${oldVariant.stock} → ${newVariant.stock}`,
+              );
+            }
+          } else {
+            console.log(`ℹ️ No stock change for ${newVariant.sku}`);
+          }
+        } else {
+          console.log(
+            `⚠️ Could not find matching variant for SKU: ${newVariant.sku}`,
+          );
+        }
+      }
+    }
+  }
+
+  // Track totalStock changes for all products
+  if (!this.isNew && this.isModified("totalStock")) {
+    const originalDoc = await (this.constructor as Model<IProduct>).findById(
+      this._id,
+    );
+
+    if (originalDoc && originalDoc.totalStock !== this.totalStock) {
+      const stockDiff = this.totalStock - originalDoc.totalStock;
+
+      // Create new inventory movement for totalStock change
+      await InventoryMovement.create({
+        productId: this._id,
+        sku: this.sku,
+        type: InventoryMovementType.ADJUSTMENT,
+        quantity: Math.abs(stockDiff),
+        previousStock: originalDoc.totalStock,
+        newStock: this.totalStock,
+        notes: `Product total stock ${stockDiff > 0 ? "increased" : "decreased"} by ${Math.abs(stockDiff)} ${this.variants && this.variants.length > 0 ? "(calculated from variants)" : "via product update"}`,
+        createdBy: (this as any).updatedBy || this.sellerId,
+        tenantId: this.tenantId,
+      });
+      console.log(
+        `✅ Created inventory movement for product totalStock: qty=${Math.abs(stockDiff)}, ${originalDoc.totalStock} → ${this.totalStock}`,
+      );
+    }
   }
 
   // Always calculate total stock from variants automatically

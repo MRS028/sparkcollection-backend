@@ -389,15 +389,117 @@ class ProductService {
 
     // Handle variants - assign to product and use save() to trigger pre-save hook
     if (input.variants !== undefined) {
+      logger.info(
+        `📦 Updating variants. Received ${input.variants.length} variants in request`,
+      );
+
+      // Track stock changes for each variant by matching _id
+      const variantStockChanges: Array<{
+        variantId: Types.ObjectId;
+        sku: string;
+        previousStock: number;
+        newStock: number;
+      }> = [];
+
+      if (product.variants && product.variants.length > 0) {
+        logger.info(
+          `📦 Product has ${product.variants.length} existing variants`,
+        );
+
+        (input.variants as any[]).forEach((inputVariant, idx) => {
+          logger.info(
+            `📦 Processing variant ${idx}: _id=${inputVariant._id}, stock=${inputVariant.stock}, sku=${inputVariant.sku}`,
+          );
+
+          // Match variant by _id if it exists, otherwise skip tracking for new variants
+          if (inputVariant._id) {
+            const existingVariant = product.variants.find(
+              (v) => v._id?.toString() === inputVariant._id.toString(),
+            );
+
+            if (existingVariant) {
+              logger.info(
+                `✓ Found matching variant ${existingVariant.sku}: previousStock=${existingVariant.stock}, newStock=${inputVariant.stock}`,
+              );
+
+              if (
+                inputVariant.stock !== undefined &&
+                inputVariant.stock !== existingVariant.stock
+              ) {
+                variantStockChanges.push({
+                  variantId: existingVariant._id!,
+                  sku: existingVariant.sku,
+                  previousStock: existingVariant.stock,
+                  newStock: inputVariant.stock,
+                });
+                logger.info(
+                  `📈 Tracked stock change for ${existingVariant.sku}: ${existingVariant.stock} → ${inputVariant.stock}`,
+                );
+              } else {
+                logger.info(
+                  `⊘ No stock change for ${existingVariant.sku} (stock=${inputVariant.stock}, previous=${existingVariant.stock})`,
+                );
+              }
+            } else {
+              logger.warn(
+                `⚠️ No matching variant found for _id: ${inputVariant._id}`,
+              );
+            }
+          } else {
+            logger.warn(
+              `⚠️ Variant at index ${idx} has no _id field - skipping inventory tracking`,
+            );
+          }
+        });
+      } else {
+        logger.info(`⊘ Product has no existing variants`);
+      }
+
       product.variants = input.variants as any;
+
+      // Create inventory movements for variant stock changes
+      if (variantStockChanges.length > 0) {
+        const movements = variantStockChanges.map((change) => {
+          const stockDiff = change.newStock - change.previousStock;
+          return {
+            productId: product._id,
+            variantId: change.variantId,
+            sku: change.sku,
+            type:
+              stockDiff > 0
+                ? InventoryMovementType.ADJUSTMENT
+                : InventoryMovementType.ADJUSTMENT,
+            quantity: Math.abs(stockDiff),
+            previousStock: change.previousStock,
+            newStock: change.newStock,
+            notes: `Variant stock ${stockDiff > 0 ? "increased" : "decreased"} by ${Math.abs(stockDiff)} via product update`,
+            createdBy: new Types.ObjectId(userId),
+            tenantId: product.tenantId,
+          };
+        });
+        await InventoryMovement.insertMany(movements);
+        logger.info(
+          `✅ Created ${movements.length} inventory movement(s) for variant stock changes:`,
+          movements.map(
+            (m) =>
+              `${m.sku}: qty=${m.quantity}, ${m.previousStock}→${m.newStock}`,
+          ),
+        );
+      } else {
+        logger.info(`No variant stock changes detected`);
+      }
     }
 
-    // Handle totalStock for products without variants
-    if (
-      input.totalStock !== undefined &&
-      (!product.variants || product.variants.length === 0)
-    ) {
-      product.totalStock = input.totalStock;
+    // Handle totalStock - capture previous value for inventory tracking
+    let previousTotalStock: number | undefined;
+    if (input.totalStock !== undefined) {
+      // Always capture previous stock when totalStock is being updated
+      previousTotalStock = product.totalStock;
+      // Only update totalStock directly for products without variants
+      // For products with variants, totalStock is auto-calculated in pre-save hook
+      if (!product.variants || product.variants.length === 0) {
+        product.totalStock = input.totalStock;
+      }
     }
 
     // Apply other updates
@@ -405,6 +507,33 @@ class ProductService {
 
     // Use save() instead of findByIdAndUpdate to trigger pre-save hook
     await product.save();
+
+    // Create inventory movement for totalStock change (for products without variants)
+    if (
+      previousTotalStock !== undefined &&
+      input.totalStock !== undefined &&
+      previousTotalStock !== input.totalStock &&
+      (!product.variants || product.variants.length === 0)
+    ) {
+      const stockDiff = input.totalStock - previousTotalStock;
+      await InventoryMovement.create({
+        productId: product._id,
+        sku: product.sku,
+        type:
+          stockDiff > 0
+            ? InventoryMovementType.ADJUSTMENT
+            : InventoryMovementType.ADJUSTMENT,
+        quantity: Math.abs(stockDiff),
+        previousStock: previousTotalStock,
+        newStock: input.totalStock,
+        notes: `Product stock ${stockDiff > 0 ? "increased" : "decreased"} by ${Math.abs(stockDiff)} via product update`,
+        createdBy: new Types.ObjectId(userId),
+        tenantId: product.tenantId,
+      });
+      logger.info(
+        `Created inventory movement for totalStock change: ${previousTotalStock} → ${input.totalStock} (quantity: ${Math.abs(stockDiff)})`,
+      );
+    }
 
     // Reload with populated fields
     const updatedProduct = await Product.findById(id)
