@@ -68,6 +68,7 @@ export interface JwtPayload {
 export interface AuthRequest extends Request {
   user?: JwtPayload;
   tenantId?: string;
+  sessionId?: string;
 }
 
 // Pagination Options

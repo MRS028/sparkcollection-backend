@@ -9,6 +9,7 @@ import {
   authenticate,
   optionalAuth,
 } from "../../auth/middleware/auth.middleware.js";
+import { ensureSessionId } from "../middleware/session.middleware.js";
 import { validate } from "../../../shared/middleware/validate.js";
 import {
   addToCartSchema,
@@ -25,12 +26,13 @@ const router = Router();
  */
 
 // Get cart (works for both guest and authenticated users)
-router.get("/", optionalAuth, cartController.getCart);
+router.get("/", optionalAuth, ensureSessionId, cartController.getCart);
 
 // Add item to cart
 router.post(
   "/items",
   optionalAuth,
+  ensureSessionId,
   validate({ body: addToCartSchema.shape.body }),
   cartController.addItem,
 );
@@ -39,6 +41,7 @@ router.post(
 router.patch(
   "/items/:itemId",
   optionalAuth,
+  ensureSessionId,
   validate({
     params: updateCartItemSchema.shape.params,
     body: updateCartItemSchema.shape.body,
@@ -50,15 +53,21 @@ router.patch(
 router.delete(
   "/items/:itemId",
   optionalAuth,
+  ensureSessionId,
   validate({ params: removeCartItemSchema.shape.params }),
   cartController.removeItem,
 );
 
 // Clear cart
-router.delete("/", optionalAuth, cartController.clearCart);
+router.delete("/", optionalAuth, ensureSessionId, cartController.clearCart);
 
 // Validate cart (check stock, prices)
-router.post("/validate", optionalAuth, cartController.validateCart);
+router.post(
+  "/validate",
+  optionalAuth,
+  ensureSessionId,
+  cartController.validateCart,
+);
 
 /**
  * Authenticated routes

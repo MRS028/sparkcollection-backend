@@ -423,6 +423,7 @@ class ProductService {
    */
   async delete(id: string, userId: string): Promise<void> {
     const product = await Product.findById(id);
+    // console.log("Deleting product with ID:", id);
     if (!product) {
       throw new NotFoundError("Product");
     }

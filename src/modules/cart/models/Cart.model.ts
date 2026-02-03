@@ -142,7 +142,7 @@ const cartSchema = new Schema<ICart>(
     },
     currency: {
       type: String,
-      default: "INR",
+      default: "BDT",
       uppercase: true,
     },
     itemCount: {

@@ -17,7 +17,7 @@ export class CartController {
   getCart = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
 
       const cart = await cartService.getOrCreateCart(userId, sessionId);
 
@@ -32,7 +32,7 @@ export class CartController {
   addItem = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
       const { productId, variantId, quantity } = req.body;
 
       const cart = await cartService.addItem(userId, sessionId, {
@@ -55,7 +55,7 @@ export class CartController {
   updateItem = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
       const { itemId } = req.params;
       const { quantity } = req.body;
 
@@ -75,7 +75,7 @@ export class CartController {
   removeItem = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
       const { itemId } = req.params;
 
       const cart = await cartService.removeItem(userId, sessionId, itemId);
@@ -91,7 +91,7 @@ export class CartController {
   clearCart = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
 
       const cart = await cartService.clearCart(userId, sessionId);
 
@@ -106,7 +106,7 @@ export class CartController {
   applyDiscount = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
       const { code } = req.body;
 
       const cart = await cartService.applyDiscountCode(userId, sessionId, code);
@@ -122,7 +122,7 @@ export class CartController {
   removeDiscount = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
 
       const cart = await cartService.removeDiscountCode(userId, sessionId);
 
@@ -152,7 +152,7 @@ export class CartController {
   validateCart = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user?.userId;
-      const sessionId = req.headers["x-session-id"] as string | undefined;
+      const sessionId = req.sessionId;
 
       const result = await cartService.validateCart(userId, sessionId);
 

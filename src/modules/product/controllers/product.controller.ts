@@ -10,6 +10,7 @@ import {
   sendCreated,
   sendNoContent,
   sendPaginated,
+  sendText,
 } from "../../../shared/utils/apiResponse.js";
 import { asyncHandler } from "../../../shared/utils/asyncHandler.js";
 import {
@@ -178,8 +179,7 @@ export const deleteProduct = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const { id } = req.params;
     await productService.delete(id, req.user!.userId);
-
-    sendNoContent(res);
+    sendText(res, "Product deleted successfully");
   },
 );
 
