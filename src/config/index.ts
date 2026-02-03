@@ -49,6 +49,18 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 
+  // SSLCommerz
+  SSLCOMMERZ_STORE_ID: z.string().optional(),
+  SSLCOMMERZ_STORE_PASSWORD: z.string().optional(),
+  SSLCOMMERZ_IS_LIVE: z
+    .string()
+    .transform((val) => val === "true")
+    .default("false"),
+  SSLCOMMERZ_SUCCESS_URL: z.string().optional(),
+  SSLCOMMERZ_FAIL_URL: z.string().optional(),
+  SSLCOMMERZ_CANCEL_URL: z.string().optional(),
+  SSLCOMMERZ_IPN_URL: z.string().optional(),
+
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
@@ -142,6 +154,15 @@ export const config = {
     secretKey: env.STRIPE_SECRET_KEY,
     webhookSecret: env.STRIPE_WEBHOOK_SECRET,
     publishableKey: env.STRIPE_PUBLISHABLE_KEY,
+  },
+  sslcommerz: {
+    storeId: env.SSLCOMMERZ_STORE_ID,
+    storePassword: env.SSLCOMMERZ_STORE_PASSWORD,
+    isLive: env.SSLCOMMERZ_IS_LIVE,
+    successUrl: env.SSLCOMMERZ_SUCCESS_URL,
+    failUrl: env.SSLCOMMERZ_FAIL_URL,
+    cancelUrl: env.SSLCOMMERZ_CANCEL_URL,
+    ipnUrl: env.SSLCOMMERZ_IPN_URL,
   },
   cloudinary: {
     cloudName: env.CLOUDINARY_CLOUD_NAME,

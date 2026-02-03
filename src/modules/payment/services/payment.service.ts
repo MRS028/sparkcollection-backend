@@ -69,6 +69,13 @@ class PaymentService {
         enabled: true,
       },
       description: `Order ${order.orderNumber}`,
+      // For testing without frontend - use a test payment method
+      ...(config.app.env === "development" && input.metadata?.testMode === "true"
+        ? {
+            payment_method: "pm_card_visa",
+            confirm: true,
+          }
+        : {}),
     });
 
     // Update order with payment intent ID
@@ -104,11 +111,44 @@ class PaymentService {
       throw new NotFoundError("Order");
     }
 
-    if (paymentIntent.status === "succeeded") {
-      return this.handleSuccessfulPayment(order, paymentIntent);
-    }
+    switch (paymentIntent.status) {
+      case "succeeded":
+        return this.handleSuccessfulPayment(order, paymentIntent);
 
-    throw new PaymentError(`Payment status: ${paymentIntent.status}`);
+      case "processing":
+        // Payment is being processed, return order as-is
+        logger.info(`Payment processing for order ${order.orderNumber}`);
+        return order;
+
+      case "requires_payment_method":
+        throw new PaymentError(
+          "Payment method required. Please complete payment on the checkout page.",
+        );
+
+      case "requires_confirmation":
+        // Confirm the payment intent server-side
+        const confirmedIntent =
+          await stripe.paymentIntents.confirm(paymentIntentId);
+        if (confirmedIntent.status === "succeeded") {
+          return this.handleSuccessfulPayment(order, confirmedIntent);
+        }
+        throw new PaymentError(
+          `Payment confirmation failed: ${confirmedIntent.status}`,
+        );
+
+      case "requires_action":
+        throw new PaymentError(
+          "Additional authentication required. Please complete 3D Secure verification.",
+        );
+
+      case "canceled":
+        throw new PaymentError("Payment was canceled");
+
+      default:
+        throw new PaymentError(
+          `Unexpected payment status: ${paymentIntent.status}`,
+        );
+    }
   }
 
   /**
@@ -395,6 +435,47 @@ class PaymentService {
     logger.error(`Dispute created: ${dispute.id} for charge ${dispute.charge}`);
     // TODO: Send notification to admin
     // TODO: Create support ticket
+  }
+
+  /**
+   * Test payment - Development only
+   * Simulates a successful payment using Stripe test cards
+   */
+  async testPayment(orderId: string): Promise<IOrder> {
+    if (config.app.env === "production") {
+      throw new BadRequestError("Test payments not allowed in production");
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new NotFoundError("Order");
+    }
+
+    if (order.paymentStatus === PaymentStatus.CAPTURED) {
+      throw new BadRequestError("Order is already paid");
+    }
+
+    // Create and immediately confirm payment with test card
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(order.total * 100),
+      currency: (order.currency || "inr").toLowerCase(),
+      payment_method: "pm_card_visa", // Stripe test card
+      confirm: true,
+      metadata: {
+        orderId: order._id.toString(),
+        orderNumber: order.orderNumber,
+        userId: order.userId.toString(),
+        testPayment: "true",
+      },
+      description: `Test payment for Order ${order.orderNumber}`,
+    });
+
+    // Update order
+    order.payment.paymentIntentId = paymentIntent.id;
+    order.payment.provider = "stripe";
+    await order.save();
+
+    return this.handleSuccessfulPayment(order, paymentIntent);
   }
 }
 

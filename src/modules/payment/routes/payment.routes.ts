@@ -10,8 +10,8 @@ import {
   adminOnly,
   authorize,
 } from "../../auth/middleware/auth.middleware.js";
+import { Role } from "../../../shared/types/index.js";
 import { validate } from "../../../shared/middleware/validate.js";
-import { UserRole } from "../../../shared/types/index.js";
 import {
   createPaymentIntentSchema,
   confirmPaymentSchema,
@@ -64,7 +64,7 @@ router.get(
 // Process refund
 router.post(
   "/:orderId/refund",
-  authorize(UserRole.ADMIN, UserRole.SUPPORT_AGENT),
+  authorize(Role.ADMIN, Role.SUPER_ADMIN),
   validate({
     params: refundSchema.shape.params,
     body: refundSchema.shape.body,

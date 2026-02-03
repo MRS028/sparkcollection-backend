@@ -91,6 +91,11 @@ export class PaymentController {
 
     sendSuccess(res, result, { message: "Webhook processed" });
   });
+
+  testPayment = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const order = await paymentService.testPayment(req.params.orderId);
+    sendSuccess(res, order, { message: "Test payment successful" });
+  });
 }
 
 export const paymentController = new PaymentController();

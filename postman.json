@@ -1452,6 +1452,242 @@
       "description": "Payment processing endpoints (Stripe integration)"
     },
     {
+      "name": "🏦 SSLCommerz Payments",
+      "item": [
+        {
+          "name": "Initialize Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order-id\",\n  \"customerPhone\": \"01712345678\",\n  \"customerName\": \"John Doe\",\n  \"customerEmail\": \"john@example.com\",\n  \"customerAddress\": \"Dhaka\",\n  \"customerCity\": \"Dhaka\",\n  \"customerPostcode\": \"1205\",\n  \"customerCountry\": \"Bangladesh\"\n}"
+            },
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/init",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", "init"]
+            },
+            "description": "Initialize SSLCommerz payment session. Returns gateway URL for redirect."
+          }
+        },
+        {
+          "name": "Get Payment Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/:orderId",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", ":orderId"],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "order-id"
+                }
+              ]
+            },
+            "description": "Get SSLCommerz payment details for order"
+          }
+        },
+        {
+          "name": "Validate Transaction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/validate/:valId",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", "validate", ":valId"],
+              "variable": [
+                {
+                  "key": "valId",
+                  "value": "validation-id"
+                }
+              ]
+            },
+            "description": "Validate SSLCommerz transaction by validation ID"
+          }
+        },
+        {
+          "name": "Get Transaction Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/transaction/:transactionId",
+              "host": ["{{apiV1}}"],
+              "path": [
+                "payments",
+                "sslcommerz",
+                "transaction",
+                ":transactionId"
+              ],
+              "variable": [
+                {
+                  "key": "transactionId",
+                  "value": "TXN_ORD001_1234567890"
+                }
+              ]
+            },
+            "description": "Get SSLCommerz transaction details by transaction ID"
+          }
+        },
+        {
+          "name": "Process Refund (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankTransactionId\": \"bank-tran-id\",\n  \"amount\": 500.00,\n  \"reason\": \"Customer requested refund\"\n}"
+            },
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/:orderId/refund",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", ":orderId", "refund"],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "order-id"
+                }
+              ]
+            },
+            "description": "Process refund via SSLCommerz (Admin only)"
+          }
+        },
+        {
+          "name": "Success Callback (SSLCommerz)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "tran_id", "value": "TXN_ORD001_1234567890" },
+                { "key": "val_id", "value": "validation-id" },
+                { "key": "amount", "value": "1000.00" },
+                { "key": "status", "value": "VALID" }
+              ]
+            },
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/success",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", "success"]
+            },
+            "description": "Success callback endpoint (called by SSLCommerz)"
+          }
+        },
+        {
+          "name": "Fail Callback (SSLCommerz)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "tran_id", "value": "TXN_ORD001_1234567890" },
+                { "key": "status", "value": "FAILED" }
+              ]
+            },
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/fail",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", "fail"]
+            },
+            "description": "Fail callback endpoint (called by SSLCommerz)"
+          }
+        },
+        {
+          "name": "Cancel Callback (SSLCommerz)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "tran_id", "value": "TXN_ORD001_1234567890" }
+              ]
+            },
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/cancel",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", "cancel"]
+            },
+            "description": "Cancel callback endpoint (called by SSLCommerz)"
+          }
+        },
+        {
+          "name": "IPN Handler (SSLCommerz)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "tran_id", "value": "TXN_ORD001_1234567890" },
+                { "key": "val_id", "value": "validation-id" },
+                { "key": "amount", "value": "1000.00" },
+                { "key": "status", "value": "VALID" },
+                { "key": "verify_sign", "value": "hash" },
+                { "key": "verify_key", "value": "keys" },
+                { "key": "value_a", "value": "order-id" }
+              ]
+            },
+            "url": {
+              "raw": "{{apiV1}}/payments/sslcommerz/ipn",
+              "host": ["{{apiV1}}"],
+              "path": ["payments", "sslcommerz", "ipn"]
+            },
+            "description": "IPN (Instant Payment Notification) endpoint (called by SSLCommerz)"
+          }
+        }
+      ],
+      "description": "SSLCommerz payment gateway endpoints for Bangladesh"
+    },
+    {
       "name": "🚚 Shipping",
       "item": [
         {

@@ -28,6 +28,7 @@ import { couponRoutes } from "./modules/coupon/index.js";
 import { orderRoutes } from "./modules/order/index.js";
 import { shippingRoutes } from "./modules/shipping/routes/shipping.routes.js";
 import { paymentRoutes } from "./modules/payment/routes/payment.routes.js";
+import { sslcommerzRoutes } from "./modules/payment/routes/sslcommerz.routes.js";
 import { supportRoutes } from "./modules/support/routes/support.routes.js";
 
 /**
@@ -177,6 +178,9 @@ export function createApp(): Application {
 
   // Payment routes
   app.use(`${apiV1}/payments`, paymentRoutes);
+
+  // SSLCommerz payment routes
+  app.use(`${apiV1}/payments/sslcommerz`, sslcommerzRoutes);
 
   // Shipping routes
   app.use(`${apiV1}/shipping`, shippingRoutes);
