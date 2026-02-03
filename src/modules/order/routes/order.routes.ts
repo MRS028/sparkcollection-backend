@@ -11,8 +11,9 @@ import {
   sellerAccess,
   adminOnly,
 } from "../../auth/middleware/auth.middleware.js";
+import { ensureSessionId } from "../../cart/middleware/session.middleware.js";
 import { validate } from "../../../shared/middleware/validate.js";
-import { UserRole } from "../../../shared/types/index.js";
+import { UserRole, Role } from "../../../shared/types/index.js";
 import {
   createOrderSchema,
   getOrderSchema,
@@ -38,6 +39,7 @@ router.use(authenticate);
 // Create order from cart
 router.post(
   "/",
+  ensureSessionId, // Ensure sessionId is available
   validate({ body: createOrderSchema.shape.body }),
   orderController.create,
 );
@@ -87,7 +89,7 @@ router.get(
 // Get order statistics
 router.get(
   "/statistics",
-  authorize(UserRole.ADMIN, UserRole.SELLER),
+  authorize(Role.ADMIN, Role.SUPER_ADMIN),
   validate({ query: orderStatsSchema.shape.query }),
   orderController.getStatistics,
 );
@@ -95,7 +97,7 @@ router.get(
 // Update order status (Admin/Seller)
 router.patch(
   "/:orderId/status",
-  authorize(UserRole.ADMIN, UserRole.SELLER),
+  authorize(Role.ADMIN, Role.SUPER_ADMIN),
   validate({
     params: updateOrderStatusSchema.shape.params,
     body: updateOrderStatusSchema.shape.body,

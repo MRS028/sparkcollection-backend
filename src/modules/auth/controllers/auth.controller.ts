@@ -61,6 +61,9 @@ export const register = asyncHandler(
     // Set refresh token in HTTP-only cookie
     setRefreshTokenCookie(res, result.tokens.refreshToken);
 
+    // Set session ID for cart tracking
+    setSessionIdCookie(res);
+
     sendCreated(
       res,
       {
@@ -91,6 +94,9 @@ export const login = asyncHandler(
 
     // Set refresh token in HTTP-only cookie
     setRefreshTokenCookie(res, result.tokens.refreshToken);
+
+    // Set session ID for cart tracking (or reuse existing one)
+    setSessionIdCookie(res, req.cookies?.sessionId);
 
     sendSuccess(
       res,
@@ -175,6 +181,9 @@ export const logout = asyncHandler(
     // Clear refresh token cookie
     clearRefreshTokenCookie(res);
 
+    // Clear session ID cookie
+    clearSessionIdCookie(res);
+
     sendSuccess(res, null, { message: "Logged out successfully" });
   },
 );
@@ -197,6 +206,9 @@ export const logoutAll = asyncHandler(
 
     // Clear refresh token cookie
     clearRefreshTokenCookie(res);
+
+    // Clear session ID cookie
+    clearSessionIdCookie(res);
 
     sendSuccess(res, null, { message: "Logged out from all devices" });
   },
@@ -301,5 +313,32 @@ function clearRefreshTokenCookie(res: Response): void {
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/api/v1/auth",
+  });
+}
+
+function setSessionIdCookie(res: Response, existingSessionId?: string): void {
+  const { randomBytes } = require("crypto");
+
+  const sessionId =
+    existingSessionId ||
+    `session_${randomBytes(16).toString("hex")}_${Date.now()}`;
+
+  res.cookie("sessionId", sessionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: "/",
+  });
+
+  res.setHeader("X-Session-ID", sessionId);
+}
+
+function clearSessionIdCookie(res: Response): void {
+  res.clearCookie("sessionId", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
   });
 }

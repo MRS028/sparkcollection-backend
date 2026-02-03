@@ -11,6 +11,7 @@ import {
   sendSuccess,
   sendPaginated,
 } from "../../../shared/utils/apiResponse.js";
+import { OrderStatus, PaymentStatus } from "../models/Order.model.js";
 
 export class OrderController {
   /**
@@ -20,15 +21,21 @@ export class OrderController {
   create = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const userId = req.user!.userId;
+      const sessionId = req.sessionId;
       const { shippingAddress, billingAddress, paymentMethod, notes } =
         req.body;
 
-      const order = await orderService.createFromCart(userId, {
-        shippingAddress,
-        billingAddress,
-        paymentMethod,
-        notes,
-      });
+      const order = await orderService.createFromCart(
+        userId,
+        sessionId,
+        {
+          shippingAddress,
+          billingAddress,
+          paymentMethod,
+          notes,
+        },
+        req.tenantId || "default", // Fix tenantId issue
+      );
 
       sendSuccess(res, order, {
         message: "Order created successfully",
@@ -83,12 +90,9 @@ export class OrderController {
         sortOrder: (sortOrder as "asc" | "desc") || "desc",
       });
 
-      sendPaginated(
-        res,
-        result.data,
-        result.pagination,
-        "Orders retrieved successfully",
-      );
+      sendPaginated(res, result.data, result.pagination, {
+        message: "Orders retrieved successfully",
+      });
     },
   );
 
@@ -109,15 +113,15 @@ export class OrderController {
           sortBy: (sortBy as string) || "createdAt",
           sortOrder: (sortOrder as "asc" | "desc") || "desc",
         },
-        { status: status as any },
+        {
+          status: status as OrderStatus,
+          tenantId: req.tenantId,
+        },
       );
 
-      sendPaginated(
-        res,
-        result.data,
-        result.pagination,
-        "Seller orders retrieved successfully",
-      );
+      sendPaginated(res, result.data, result.pagination, {
+        message: "Seller orders retrieved successfully",
+      });
     },
   );
 
@@ -141,11 +145,12 @@ export class OrderController {
 
       const result = await orderService.getAll(
         {
-          status: status as any,
-          paymentStatus: paymentStatus as any,
+          status: status as OrderStatus,
+          paymentStatus: paymentStatus as PaymentStatus,
           startDate: startDate ? new Date(startDate as string) : undefined,
           endDate: endDate ? new Date(endDate as string) : undefined,
           search: search as string,
+          tenantId: req.tenantId,
         },
         {
           page: Number(page) || 1,
@@ -155,12 +160,9 @@ export class OrderController {
         },
       );
 
-      sendPaginated(
-        res,
-        result.data,
-        result.pagination,
-        "Orders retrieved successfully",
-      );
+      sendPaginated(res, result.data, result.pagination, {
+        message: "Orders retrieved successfully",
+      });
     },
   );
 
@@ -176,7 +178,7 @@ export class OrderController {
 
       const order = await orderService.updateStatus(
         orderId,
-        status,
+        status as OrderStatus,
         message,
         actorId,
       );
@@ -194,7 +196,7 @@ export class OrderController {
       const { orderId } = req.params;
       const { reason } = req.body;
       const userId = req.user!.userId;
-      const role = req.user!.role as UserRole;
+      const role = req.user!.role as unknown as UserRole;
 
       const order = await orderService.cancel(orderId, reason, userId, role);
 
@@ -230,7 +232,7 @@ export class OrderController {
   getStatistics = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
       const { startDate, endDate } = req.query;
-      const role = req.user!.role as UserRole;
+      const role = req.user!.role as unknown as UserRole;
       const userId = req.user!.userId;
 
       const dateRange =
@@ -242,7 +244,7 @@ export class OrderController {
           : undefined;
 
       const stats = await orderService.getStatistics(
-        undefined,
+        req.tenantId,
         role === UserRole.SELLER ? userId : undefined,
         dateRange,
       );

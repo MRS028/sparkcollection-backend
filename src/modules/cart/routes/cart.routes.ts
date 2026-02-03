@@ -73,16 +73,22 @@ router.post(
  * Authenticated routes
  */
 
-// Apply discount code
+// Apply discount code (allow both guest and authenticated users)
 router.post(
   "/discount",
-  authenticate,
+  optionalAuth,
+  ensureSessionId,
   validate({ body: applyDiscountSchema.shape.body }),
   cartController.applyDiscount,
 );
 
-// Remove discount code
-router.delete("/discount", authenticate, cartController.removeDiscount);
+// Remove discount code (allow both guest and authenticated users)
+router.delete(
+  "/discount",
+  optionalAuth,
+  ensureSessionId,
+  cartController.removeDiscount,
+);
 
 // Merge guest cart with user cart (on login)
 router.post(

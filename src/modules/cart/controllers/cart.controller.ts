@@ -61,8 +61,8 @@ export class CartController {
       const { quantity } = req.body;
 
       // First, verify the cart exists
-    await cartService.getOrCreateCart(userId, sessionId);
-    //  console.log("Cart exists:", carthave);
+      await cartService.getOrCreateCart(userId, sessionId);
+      //  console.log("Cart exists:", carthave);
 
       // Then update the specific item
       const cart = await cartService.updateItemQuantity(userId, sessionId, {
@@ -115,7 +115,7 @@ export class CartController {
       const sessionId = req.sessionId;
       const { code } = req.body;
 
-      const cart = await cartService.applyDiscountCode(userId, sessionId, code);
+      const cart = await cartService.applyDiscountCode(sessionId, code);
 
       sendSuccess(res, cart, { message: "Discount applied" });
     },

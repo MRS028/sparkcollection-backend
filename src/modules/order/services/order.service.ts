@@ -60,14 +60,35 @@ class OrderService {
    */
   async createFromCart(
     userId: string,
+    sessionId: string | undefined,
     input: CreateOrderInput,
     tenantId: string = "default",
   ): Promise<IOrder> {
-    // Get and validate cart
-    const cart = await Cart.findOne({
-      userId: new Types.ObjectId(userId),
-      tenantId,
-    });
+    let cart = null;
+
+    // First priority: Find cart by sessionId if available
+    if (sessionId) {
+      cart = await Cart.findOne({
+        sessionId,
+        tenantId,
+      });
+
+      // If found session cart, convert it to user cart
+      if (cart) {
+        cart.userId = new Types.ObjectId(userId);
+        cart.sessionId = undefined;
+        cart.expiresAt = undefined; // Remove expiration for user carts
+        await cart.save();
+      }
+    }
+
+    // Fallback: Find cart by userId if no session cart found
+    if (!cart) {
+      cart = await Cart.findOne({
+        userId: new Types.ObjectId(userId),
+        tenantId,
+      });
+    }
 
     if (!cart || cart.items.length === 0) {
       throw new BadRequestError("Cart is empty");

@@ -4,7 +4,6 @@
  */
 
 import mongoose, { Schema, Document, Types } from "mongoose";
-import { nanoid } from "nanoid";
 
 // Order Status
 export enum OrderStatus {
@@ -232,8 +231,11 @@ const orderSchema = new Schema<IOrder>(
     orderNumber: {
       type: String,
       unique: true,
-      required: true,
       index: true,
+      default: function () {
+        // Use the document's _id as the order number
+        return this._id.toString();
+      },
     },
     userId: {
       type: Schema.Types.ObjectId,
@@ -325,16 +327,6 @@ orderSchema.index({ "items.sellerId": 1, status: 1 });
 orderSchema.index({ tenantId: 1, createdAt: -1 });
 orderSchema.index({ orderNumber: 1 }, { unique: true });
 
-// Generate order number before saving
-orderSchema.pre("save", function (next) {
-  if (!this.orderNumber) {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = nanoid(6).toUpperCase();
-    this.orderNumber = `ORD-${timestamp}-${random}`;
-  }
-  next();
-});
-
 // Method to add timeline event
 orderSchema.methods.addTimelineEvent = function (
   status: OrderStatus,
@@ -365,11 +357,9 @@ orderSchema.methods.updateStatus = function (
   }
 };
 
-// Static method to generate order number
+// Static method to generate order number (now just returns ObjectId string)
 orderSchema.statics.generateOrderNumber = function (): string {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = nanoid(6).toUpperCase();
-  return `ORD-${timestamp}-${random}`;
+  return new Types.ObjectId().toString();
 };
 
 export const Order = mongoose.model<IOrder>("Order", orderSchema);

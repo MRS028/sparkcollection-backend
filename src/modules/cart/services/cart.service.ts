@@ -323,27 +323,63 @@ class CartService {
    * Apply discount code
    */
   async applyDiscountCode(
-    userId: string | undefined,
+    // userId: string | undefined,
     sessionId: string | undefined,
     code: string,
     tenantId: string = "default",
   ): Promise<ICart> {
-    const cart = await this.getOrCreateCart(userId, sessionId, tenantId);
+    logger.info(
+      `applyDiscountCode called - sessionId: ${sessionId}`,
+    );
+
+    // Fetch cart directly from DB to ensure we have fresh data (not from cache)
+    let cart = await Cart.findOne(
+      sessionId
+        ? { sessionId, tenantId }
+        : undefined,
+    );
+
+    if (!cart) {
+      throw new BadRequestError("Cart not found");
+    }
+
+    logger.info(
+      `Cart found: _id: ${cart._id}, userId: ${cart.userId}, sessionId: ${cart.sessionId}, items: ${JSON.stringify(cart.items)}`,
+    );
+
+    // Defensive: ensure items is an array and not empty
+    if (!Array.isArray(cart.items) || cart.items.length === 0) {
+      logger.error(
+        `Cart is empty or items not loaded. Cart: ${JSON.stringify(cart)}`,
+      );
+      throw new BadRequestError("Cart is empty");
+    }
 
     // Prepare cart items for validation
     const cartItems = cart.items.map((item) => ({
       productId: item.productId.toString(),
-      categoryId: undefined, // TODO: Add category tracking to cart items if needed
+      categoryId: undefined,
     }));
+
+    // Recompute gross (pre-discount) from live items
+    const liveSubtotal = cart.items.reduce(
+      (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+      0,
+    );
+    const taxEstimate =
+      Math.round(((liveSubtotal * (cart.taxRate || 0)) / 100) * 100) / 100;
+    const cartAmount =
+      Math.round(
+        Math.max(0, liveSubtotal + (cart.shipping || 0) + taxEstimate) * 100,
+      ) / 100;
+
+    logger.info(
+      `Coupon validation - code: ${code}, cartAmount: ${cartAmount}, items: ${cart.items.length}`,
+    );
 
     // Validate coupon
     const validation = await couponService.validateCoupon(
-      {
-        code,
-        userId,
-        cartAmount: cart.subtotal,
-        cartItems,
-      },
+      { code,  cartAmount, cartItems },
       tenantId,
     );
 
@@ -358,7 +394,7 @@ class CartService {
     cart.discountCode = code;
 
     await cart.save();
-    await this.invalidateCache(userId, sessionId);
+    await this.invalidateCache(sessionId);
 
     logger.info(`Discount applied: ${code} - ₹${validation.discount}`);
     return cart;
