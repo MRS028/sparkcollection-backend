@@ -99,7 +99,10 @@ export const sendPaginated = <T>(
     limit: number;
     total: number;
   },
-  message?: string,
+  additionalData?: {
+    message?: string;
+    [key: string]: unknown;
+  },
 ): Response => {
   const { page, limit, total } = pagination;
   const totalPages = Math.ceil(total / limit);
@@ -114,8 +117,8 @@ export const sendPaginated = <T>(
   };
 
   return sendSuccess(res, data, {
-    message,
-    meta: { pagination: paginationMeta },
+    message: additionalData?.message,
+    meta: { pagination: paginationMeta, ...additionalData },
   });
 };
 
@@ -160,7 +163,7 @@ export const sendText = <T>(
   const response: ApiSuccessResponse<T> = {
     success: true,
     data,
-    message
+    message,
   };
 
   if (message) {

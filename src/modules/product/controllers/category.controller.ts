@@ -77,3 +77,25 @@ export const deleteCategory = asyncHandler(
     sendSuccess(res, null, { message: "Category deleted successfully" });
   },
 );
+
+/**
+ * Get products by category
+ */
+export const getCategoryProducts = asyncHandler(
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
+    const { id } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    const result = await categoryService.getProductsByCategory(id, {
+      page,
+      limit,
+    });
+
+    const { sendPaginated } =
+      await import("../../../shared/utils/apiResponse.js");
+    sendPaginated(res, result.products, result.pagination, {
+      category: result.category,
+    });
+  },
+);

@@ -42,33 +42,28 @@ export const createProduct = asyncHandler(
 
 /**
  * @route   GET /api/v1/products
- * @desc    Get all products with filters
+ * @desc    Get all products
  * @access  Public
  */
 export const getProducts = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
-    const query = req.query as unknown as ProductListQuery;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const category = req.query.category as string;
+    const status = req.query.status as string;
+    const brand = req.query.brand as string;
+    const search = req.query.search as string;
 
     const result = await productService.getAll(
       {
-        category: query.category,
-        subcategory: query.subcategory,
-        brand: query.brand,
-        status: query.status,
-        minPrice: query.minPrice,
-        maxPrice: query.maxPrice,
-        inStock: query.inStock,
-        isFeatured: query.isFeatured,
-        sellerId: query.sellerId,
-        search: query.search,
-        tags: query.tags,
-        tenantId: req.tenantId,
+        category,
+        status: status as any,
+        brand,
+        search,
       },
       {
-        page: query.page,
-        limit: query.limit,
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
+        page,
+        limit,
       },
     );
 
@@ -83,20 +78,19 @@ export const getProducts = asyncHandler(
  */
 export const searchProducts = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
-    const query = req.query as unknown as SearchQuery;
+    const searchTerm = req.query.q as string;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const category = req.query.category as string;
+
+    if (!searchTerm) {
+      return sendSuccess(res, { products: [], total: 0 });
+    }
 
     const result = await productService.search(
-      query.q,
-      {
-        category: query.category,
-        minPrice: query.minPrice,
-        maxPrice: query.maxPrice,
-        tenantId: req.tenantId,
-      },
-      {
-        page: query.page,
-        limit: query.limit,
-      },
+      searchTerm,
+      { category },
+      { page, limit },
     );
 
     sendPaginated(res, result.data, result.pagination);
@@ -111,9 +105,9 @@ export const searchProducts = asyncHandler(
 export const getFeaturedProducts = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const limit = parseInt(req.query.limit as string) || 10;
-    const products = await productService.getFeatured(limit, req.tenantId);
+    const products = await productService.getFeatured(limit);
 
-    sendSuccess(res, { products });
+    sendSuccess(res, { products, count: products.length });
   },
 );
 

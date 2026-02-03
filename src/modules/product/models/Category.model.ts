@@ -156,7 +156,7 @@ categorySchema.virtual("children", {
 
 // Virtual for full path
 categorySchema.virtual("fullPath").get(function () {
-  return this.ancestors.length > 0
+  return this.ancestors && this.ancestors.length > 0
     ? `${this.ancestors.join("/")}/${this._id}`
     : this._id.toString();
 });

@@ -92,6 +92,7 @@ export interface CreateProductInput {
   seoDescription?: string;
   sellerId: string;
   tenantId: string;
+  status?: ProductStatus;
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {
@@ -104,13 +105,21 @@ class ProductService {
   private readonly cacheTTL = 300; // 5 minutes
 
   /**
-   * Find or create category by name - Simplified
+   * Find or create category by name or ID - Simplified
    */
   private async findOrCreateCategory(
     categoryInput: string,
     tenantId: string,
   ): Promise<Types.ObjectId> {
-    // Always treat input as category name for simplicity
+    // Check if it's a valid ObjectId first
+    if (Types.ObjectId.isValid(categoryInput)) {
+      const category = await Category.findById(categoryInput);
+      if (category) {
+        return category._id;
+      }
+    }
+
+    // Treat as category name
     const name = categoryInput.trim();
 
     // Find existing category by name (case-insensitive)
@@ -143,20 +152,25 @@ class ProductService {
       throw new ConflictError("SKU already exists");
     }
 
-    // Auto-create/find category from name
+    // Auto-create/find category from name or ID
     const categoryId = await this.findOrCreateCategory(
       input.category,
       input.tenantId,
     );
 
-    const product = await Product.create({
+    // Prepare product data
+    const productData: any = {
       ...input,
       sku: input.sku.toUpperCase(),
       category: categoryId,
-      subcategory: undefined, // Keep it simple - no subcategories
       sellerId: new Types.ObjectId(input.sellerId),
-      status: ProductStatus.DRAFT,
-    });
+      status: input.status || ProductStatus.ACTIVE, // Default to ACTIVE instead of DRAFT
+    };
+
+    // Remove subcategory if present
+    delete productData.subcategory;
+
+    const product = await Product.create(productData);
 
     // Update category product count
     await Category.findByIdAndUpdate(categoryId, {
@@ -339,19 +353,26 @@ class ProductService {
 
     const query = await this.buildFilterQuery(filters);
 
+    // Debug logging
+    console.log("🔍 Product Query Filters:", JSON.stringify(filters, null, 2));
+    console.log("🔍 Built MongoDB Query:", JSON.stringify(query, null, 2));
+
     const sort: Record<string, 1 | -1> = {
       [sortBy]: sortOrder === "asc" ? 1 : -1,
     };
 
     const [products, total] = await Promise.all([
       Product.find(query)
-        .populate("category", "name slug")
-        .populate("subcategory", "name slug")
+        .populate("category", "name slug description image isActive isFeatured")
+        .populate("sellerId", "firstName lastName email")
         .sort(sort)
         .skip(skip)
         .limit(limit),
       Product.countDocuments(query),
     ]);
+
+    console.log("✅ Found products:", products.length);
+    console.log("✅ Total count:", total);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -619,11 +640,11 @@ class ProductService {
   ): Promise<FilterQuery<IProduct>> {
     const query: FilterQuery<IProduct> = {};
 
+    // Only filter by status if explicitly provided
     if (filters.status) {
       query.status = filters.status;
-    } else {
-      query.status = ProductStatus.ACTIVE;
     }
+    // Don't filter by status by default - show all products
 
     // Handle category - can be ObjectId or name
     if (filters.category) {

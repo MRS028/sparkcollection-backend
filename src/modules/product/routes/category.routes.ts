@@ -12,6 +12,11 @@ const router = Router();
 router.get("/", optionalAuth, categoryController.getCategories);
 router.get("/statistics", optionalAuth, categoryController.getCategoryStats);
 router.get("/:id", optionalAuth, categoryController.getCategoryById);
+router.get(
+  "/:id/products",
+  optionalAuth,
+  categoryController.getCategoryProducts,
+);
 
 // Admin routes
 router.post("/", authenticate, adminOnly, categoryController.createCategory);

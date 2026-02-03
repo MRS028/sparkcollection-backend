@@ -161,7 +161,7 @@ const cartSchema = new Schema<ICart>(
     },
     expiresAt: {
       type: Date,
-      index: { expireAfterSeconds: 0 },
+      // TTL index defined below instead of inline
     },
   },
   {
@@ -173,6 +173,8 @@ const cartSchema = new Schema<ICart>(
 cartSchema.index({ userId: 1, tenantId: 1 });
 cartSchema.index({ sessionId: 1, tenantId: 1 });
 cartSchema.index({ updatedAt: 1 });
+// TTL index for automatic cart expiration
+cartSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Pre-save middleware to calculate totals
 cartSchema.pre("save", function (next) {

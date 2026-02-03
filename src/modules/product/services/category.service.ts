@@ -154,6 +154,55 @@ class CategoryService {
       }
     );
   }
+
+  /**
+   * Get products by category
+   */
+  async getProductsByCategory(
+    categoryId: string,
+    options: { page?: number; limit?: number } = {},
+  ) {
+    const { page = 1, limit = 20 } = options;
+    const skip = (page - 1) * limit;
+
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      throw new NotFoundError("Category");
+    }
+
+    const { default: Product } = await import("../models/Product.model.js");
+
+    const [products, total] = await Promise.all([
+      Product.find({ category: categoryId, status: "active" })
+        .select("name slug description basePrice images isFeatured totalStock")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Product.countDocuments({ category: categoryId, status: "active" }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      category: {
+        _id: category._id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+        image: category.image,
+      },
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  }
 }
 
 export const categoryService = new CategoryService();

@@ -37,7 +37,7 @@ const refreshTokenSchema = new Schema<IRefreshToken>(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
+      // index: true, // Removed - using TTL index below instead
     },
     createdByIp: {
       type: String,
