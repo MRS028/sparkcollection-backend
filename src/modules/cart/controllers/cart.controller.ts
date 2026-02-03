@@ -51,6 +51,7 @@ export class CartController {
   /**
    * Update item quantity
    * PATCH /api/v1/cart/items/:itemId
+   * itemId should be the cart item's _id (not the productId or cart _id)
    */
   updateItem = asyncHandler(
     async (req: AuthRequest, res: Response): Promise<void> => {
@@ -59,6 +60,11 @@ export class CartController {
       const { itemId } = req.params;
       const { quantity } = req.body;
 
+      // First, verify the cart exists
+    await cartService.getOrCreateCart(userId, sessionId);
+    //  console.log("Cart exists:", carthave);
+
+      // Then update the specific item
       const cart = await cartService.updateItemQuantity(userId, sessionId, {
         itemId,
         quantity,

@@ -156,6 +156,7 @@ class CartService {
       }
 
       cart.items[existingItemIndex].quantity = newQuantity;
+      cart.markModified("items");
     } else {
       cart.items.push(itemData as ICartItem);
     }
@@ -163,8 +164,18 @@ class CartService {
     await cart.save();
     await this.invalidateCache(userId, sessionId);
 
+    // Reload cart to ensure _id fields are populated for new items
+    const updatedCart = await Cart.findById(cart._id);
+    if (updatedCart) {
+      await redis.set(
+        this.getCacheKey(userId, sessionId),
+        updatedCart.toJSON(),
+        this.cacheTTL,
+      );
+    }
+
     logger.info(`Item added to cart: ${itemData.sku}`);
-    return cart;
+    return updatedCart || cart;
   }
 
   /**
@@ -176,14 +187,31 @@ class CartService {
     input: UpdateCartItemInput,
     tenantId: string = "default",
   ): Promise<ICart> {
-    const cart = await this.getOrCreateCart(userId, sessionId, tenantId);
+    // Fetch directly from DB to ensure proper ObjectId handling (not from cache)
+    let cart = await Cart.findOne(
+      userId
+        ? { userId: new Types.ObjectId(userId), tenantId }
+        : { sessionId, tenantId },
+    );
+
+    if (!cart) {
+      throw new NotFoundError("Cart");
+    }
 
     const itemIndex = cart.items.findIndex(
-      (item) => item._id?.toString() === input.itemId,
+      (item) => item._id?.toString() === input.itemId.trim(),
     );
 
     if (itemIndex === -1) {
-      throw new NotFoundError("Cart item");
+      const availableIds = cart.items
+        .map((i) => `${i.name}: ${i._id?.toString()}`)
+        .join(", ");
+      logger.error(
+        `Cart item not found. Requested itemId: "${input.itemId}". Cart has ${cart.items.length} items. Available: ${availableIds}`,
+      );
+      throw new NotFoundError(
+        `Cart item. Available item IDs: [${cart.items.map((i) => i._id?.toString()).join(", ")}]`,
+      );
     }
 
     const item = cart.items[itemIndex];
@@ -216,10 +244,22 @@ class CartService {
       cart.items[itemIndex].quantity = input.quantity;
     }
 
+    // Mark items array as modified for Mongoose to detect changes
+    cart.markModified("items");
     await cart.save();
     await this.invalidateCache(userId, sessionId);
 
-    return cart;
+    // Reload cart to ensure all fields are properly populated
+    const updatedCart = await Cart.findById(cart._id);
+    if (updatedCart) {
+      await redis.set(
+        this.getCacheKey(userId, sessionId),
+        updatedCart.toJSON(),
+        this.cacheTTL,
+      );
+    }
+
+    return updatedCart || cart;
   }
 
   /**
@@ -231,10 +271,19 @@ class CartService {
     itemId: string,
     tenantId: string = "default",
   ): Promise<ICart> {
-    const cart = await this.getOrCreateCart(userId, sessionId, tenantId);
+    // Fetch directly from DB to ensure proper ObjectId handling
+    let cart = await Cart.findOne(
+      userId
+        ? { userId: new Types.ObjectId(userId), tenantId }
+        : { sessionId, tenantId },
+    );
+
+    if (!cart) {
+      throw new NotFoundError("Cart");
+    }
 
     const itemIndex = cart.items.findIndex(
-      (item) => item._id?.toString() === itemId,
+      (item) => item._id?.toString() === itemId.trim(),
     );
 
     if (itemIndex === -1) {
@@ -346,6 +395,7 @@ class CartService {
 
       if (existingIndex > -1) {
         targetCart.items[existingIndex].quantity += guestItem.quantity;
+        targetCart.markModified("items");
       } else {
         targetCart.items.push(guestItem);
       }
@@ -425,6 +475,7 @@ class CartService {
     }
 
     if (hasChanges) {
+      cart.markModified("items");
       await cart.save();
       await this.invalidateCache(userId, sessionId);
     }
