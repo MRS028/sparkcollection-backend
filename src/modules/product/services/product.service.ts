@@ -98,6 +98,7 @@ export interface CreateProductInput {
 export interface UpdateProductInput extends Partial<CreateProductInput> {
   status?: ProductStatus;
   isFeatured?: boolean;
+  totalStock?: number;
 }
 
 class ProductService {
@@ -344,20 +345,69 @@ class ProductService {
       ]);
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      {
-        ...input,
-        sku: input.sku ? input.sku.toUpperCase() : undefined,
-        category: input.category
-          ? new Types.ObjectId(input.category)
-          : undefined,
-        subcategory: input.subcategory
-          ? new Types.ObjectId(input.subcategory)
-          : undefined,
-      },
-      { new: true, runValidators: true },
-    )
+    // Build update object, excluding undefined values
+    const updateData: any = {};
+
+    // Handle simple fields (exclude totalStock and variants - they'll be handled separately)
+    const fieldsToUpdate = [
+      "name",
+      "description",
+      "shortDescription",
+      "basePrice",
+      "compareAtPrice",
+      "costPrice",
+      "brand",
+      "tags",
+      "attributes",
+      "weight",
+      "dimensions",
+      "isDigital",
+      "seoTitle",
+      "seoDescription",
+      "status",
+      "isFeatured",
+    ];
+
+    fieldsToUpdate.forEach((field) => {
+      if (input[field as keyof UpdateProductInput] !== undefined) {
+        updateData[field] = input[field as keyof UpdateProductInput];
+      }
+    });
+
+    // Handle special fields
+    if (input.sku) {
+      updateData.sku = input.sku.toUpperCase();
+    }
+
+    if (input.category) {
+      updateData.category = new Types.ObjectId(input.category);
+    }
+
+    if (input.subcategory) {
+      updateData.subcategory = new Types.ObjectId(input.subcategory);
+    }
+
+    // Handle variants - assign to product and use save() to trigger pre-save hook
+    if (input.variants !== undefined) {
+      product.variants = input.variants as any;
+    }
+
+    // Handle totalStock for products without variants
+    if (
+      input.totalStock !== undefined &&
+      (!product.variants || product.variants.length === 0)
+    ) {
+      product.totalStock = input.totalStock;
+    }
+
+    // Apply other updates
+    Object.assign(product, updateData);
+
+    // Use save() instead of findByIdAndUpdate to trigger pre-save hook
+    await product.save();
+
+    // Reload with populated fields
+    const updatedProduct = await Product.findById(id)
       .populate("category", "name slug")
       .populate("subcategory", "name slug");
 
@@ -567,8 +617,41 @@ class ProductService {
       throw new NotFoundError("Variant");
     }
 
-    Object.assign(product.variants[variantIndex], update);
+    const variant = product.variants[variantIndex];
+    const previousStock = variant.stock;
+
+    // Update variant fields
+    Object.assign(variant, update);
+
+    // Save product (this will trigger pre-save hook to recalculate totalStock)
     await product.save();
+
+    // Create inventory movement if stock was changed
+    if (update.stock !== undefined && update.stock !== previousStock) {
+      const stockDiff = update.stock - previousStock;
+      const movementType =
+        stockDiff > 0
+          ? InventoryMovementType.ADJUSTMENT
+          : InventoryMovementType.ADJUSTMENT;
+
+      await InventoryMovement.create({
+        productId: product._id,
+        variantId: variant._id,
+        sku: variant.sku,
+        type: movementType,
+        quantity: Math.abs(stockDiff),
+        previousStock,
+        newStock: update.stock,
+        notes: `Variant stock ${stockDiff > 0 ? "increased" : "decreased"} by ${Math.abs(stockDiff)}`,
+        createdBy: new Types.ObjectId(userId),
+        tenantId: product.tenantId,
+      });
+
+      logger.info(
+        `Variant stock updated: ${variant.sku} - ${previousStock} → ${update.stock}`,
+      );
+    }
+
     await this.invalidateCache(productId, product.slug);
 
     return product;

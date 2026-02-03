@@ -360,7 +360,7 @@ productSchema.pre("save", async function (next) {
     this.slug = slug;
   }
 
-  // Calculate total stock from variants
+  // Always calculate total stock from variants automatically
   if (this.variants && this.variants.length > 0) {
     this.totalStock = this.variants
       .filter((v) => v.isActive)
