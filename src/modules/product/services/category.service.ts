@@ -34,9 +34,10 @@ class CategoryService {
   async getAll(tenantId: string): Promise<ICategory[]> {
     const categories = await Category.find({ tenantId })
       .select(
-        "_id name slug description image isActive isFeatured productCount createdAt",
+        "_id name slug description image isActive isFeatured productCount createdAt updatedAt",
       )
-      .sort({ name: 1 });
+      .sort({ name: 1 })
+      .lean<ICategory[]>();
     return categories;
   }
 
@@ -170,8 +171,6 @@ class CategoryService {
       throw new NotFoundError("Category");
     }
 
-    const { default: Product } = await import("../models/Product.model.js");
-
     const [products, total] = await Promise.all([
       Product.find({ category: categoryId, status: "active" })
         .select("name slug description basePrice images isFeatured totalStock")
@@ -206,3 +205,73 @@ class CategoryService {
 }
 
 export const categoryService = new CategoryService();
+export async function find(
+  tenantId: string,
+  options: {
+    search?: string;
+    isActive?: boolean;
+    isFeatured?: boolean;
+    page?: number;
+    limit?: number;
+    sort?: Record<string, 1 | -1>;
+  } = {},
+): Promise<{
+  data: ICategory[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}> {
+  const {
+    search,
+    isActive,
+    isFeatured,
+    page = 1,
+    limit = 20,
+    sort = { name: 1 },
+  } = options;
+
+  const filter: Record<string, unknown> = { tenantId };
+
+  if (typeof isActive === "boolean") {
+    filter.isActive = isActive;
+  }
+
+  if (typeof isFeatured === "boolean") {
+    filter.isFeatured = isFeatured;
+  }
+
+  if (search) {
+    filter.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    Category.find(filter)
+      .select(
+        "_id name slug description image isActive isFeatured productCount createdAt",
+      )
+      .sort(sort)
+      .skip(skip)
+      .limit(limit),
+    Category.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  return {
+    data,
+    total,
+    page,
+    limit,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  };
+}

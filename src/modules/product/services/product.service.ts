@@ -130,13 +130,35 @@ class ProductService {
 
     // Auto-create if not found
     if (!category) {
-      category = await Category.create({
-        name,
-        tenantId,
-        isActive: true,
-        level: 0,
-      });
-      logger.info(`✅ Auto-created category: ${category.name}`);
+      try {
+        category = await Category.create({
+          name,
+          tenantId,
+          isActive: true,
+          isFeatured: false,
+          level: 0,
+          sortOrder: 0,
+          productCount: 0,
+          ancestors: [],
+          parent: null,
+        });
+        logger.info(
+          `✅ Auto-created category: ${category.name} (${category._id})`,
+        );
+      } catch (error: any) {
+        // If slug collision occurs, try to find again (race condition)
+        const existingCat = await Category.findOne({
+          name: { $regex: new RegExp(`^${name}$`, "i") },
+          tenantId,
+        });
+        if (existingCat) {
+          logger.info(
+            `✅ Using existing category after collision: ${existingCat.name}`,
+          );
+          return existingCat._id;
+        }
+        throw error;
+      }
     }
 
     return category._id;
@@ -176,6 +198,43 @@ class ProductService {
     await Category.findByIdAndUpdate(categoryId, {
       $inc: { productCount: 1 },
     });
+
+    // Create initial inventory movement record for the product
+    if (product.totalStock > 0) {
+      await InventoryMovement.create({
+        productId: product._id,
+        sku: product.sku,
+        type: InventoryMovementType.PURCHASE,
+        quantity: product.totalStock,
+        previousStock: 0,
+        newStock: product.totalStock,
+        notes: "Initial stock on product creation",
+        createdBy: new Types.ObjectId(input.sellerId),
+        tenantId: product.tenantId,
+      });
+    }
+
+    // Create inventory movement records for each variant if they have stock
+    if (product.variants && product.variants.length > 0) {
+      const variantMovements = product.variants
+        .filter((variant) => variant.stock > 0)
+        .map((variant) => ({
+          productId: product._id,
+          variantId: variant._id,
+          sku: variant.sku,
+          type: InventoryMovementType.PURCHASE,
+          quantity: variant.stock,
+          previousStock: 0,
+          newStock: variant.stock,
+          notes: "Initial stock on variant creation",
+          createdBy: new Types.ObjectId(input.sellerId),
+          tenantId: product.tenantId,
+        }));
+
+      if (variantMovements.length > 0) {
+        await InventoryMovement.insertMany(variantMovements);
+      }
+    }
 
     logger.info(`Product created: ${product.name} (${product.sku})`);
     return product;
@@ -461,6 +520,23 @@ class ProductService {
 
     await product.save();
     await this.invalidateCache(productId, product.slug);
+
+    // Create inventory movement record for new variant if it has stock
+    const newVariant = product.variants[product.variants.length - 1];
+    if (newVariant.stock > 0) {
+      await InventoryMovement.create({
+        productId: product._id,
+        variantId: newVariant._id,
+        sku: newVariant.sku,
+        type: InventoryMovementType.PURCHASE,
+        quantity: newVariant.stock,
+        previousStock: 0,
+        newStock: newVariant.stock,
+        notes: "Initial stock on variant creation",
+        createdBy: new Types.ObjectId(userId),
+        tenantId: product.tenantId,
+      });
+    }
 
     return product;
   }

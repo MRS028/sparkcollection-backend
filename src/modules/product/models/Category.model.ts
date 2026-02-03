@@ -129,13 +129,13 @@ categorySchema.pre("save", async function (next) {
     this.slug = slug;
   }
 
-  // Update level and ancestors
-  if (this.isModified("parent")) {
+  // Initialize or update level and ancestors
+  if (this.isNew || this.isModified("parent")) {
     if (this.parent) {
       const Category = this.constructor as Model<ICategory>;
       const parentCat = await Category.findById(this.parent);
       if (parentCat) {
-        this.ancestors = [...parentCat.ancestors, parentCat._id];
+        this.ancestors = [...(parentCat.ancestors || []), parentCat._id];
         this.level = parentCat.level + 1;
       }
     } else {
@@ -156,9 +156,10 @@ categorySchema.virtual("children", {
 
 // Virtual for full path
 categorySchema.virtual("fullPath").get(function () {
-  return this.ancestors && this.ancestors.length > 0
-    ? `${this.ancestors.join("/")}/${this._id}`
-    : this._id.toString();
+  if (!this.ancestors || this.ancestors.length === 0) {
+    return this._id?.toString() || "";
+  }
+  return `${this.ancestors.join("/")}/${this._id}`;
 });
 
 export const Category = mongoose.model<ICategory>("Category", categorySchema);

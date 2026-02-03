@@ -405,3 +405,13 @@ productSchema.virtual("inStock").get(function () {
 });
 
 export const Product = mongoose.model<IProduct>("Product", productSchema);
+
+export function countDocuments(arg0: {
+  category: string;
+  status: string;
+}): any {
+  throw new Error("Function not implemented.");
+}
+export function find(arg0: { category: string; status: string }) {
+  throw new Error("Function not implemented.");
+}
