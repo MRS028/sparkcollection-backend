@@ -1,5 +1,5 @@
 {
-  "name": "spark-collection-uo-backend",
+  "name": "Ecommerzbd-backend",
   "version": "1.0.0",
   "description": "Production-grade SaaS eCommerce backend with TypeScript",
   "main": "dist/server.js",

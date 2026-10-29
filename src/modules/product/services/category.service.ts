@@ -3,7 +3,7 @@
  */
 
 import { Category, ICategory } from "../models/Category.model.js";
-import { Product } from "../models/Product.model.js";
+import { Product, ProductStatus } from "../models/Product.model.js";
 import {
   NotFoundError,
   BadRequestError,
@@ -106,6 +106,7 @@ class CategoryService {
 
   /**
    * Delete category
+   * ✅ FIX: soft-deleted (DISCONTINUED) products আর count হবে না।
    */
   async delete(id: string): Promise<void> {
     const category = await Category.findById(id);
@@ -113,11 +114,34 @@ class CategoryService {
       throw new NotFoundError("Category");
     }
 
-    // Check if category has products
-    const productCount = await Product.countDocuments({ category: id });
+    // ✅ Only count ACTIVE / non-deleted products
+    const productCount = await Product.countDocuments({
+      category: id,
+      status: { $ne: ProductStatus.DISCONTINUED },
+    });
+
     if (productCount > 0) {
       throw new BadRequestError(
-        `Cannot delete category. It has ${productCount} products. Reassign or delete products first.`,
+        `Cannot delete category. It has ${productCount} active product${productCount > 1 ? "s" : ""}. Reassign or delete them first.`,
+      );
+    }
+
+    // ✅ Soft-deleted products are orphaned — detach them from this category
+    //    so they don't point to a non-existent category.
+    //    (Only if `category` is not required in your Product schema.)
+    try {
+      await Product.updateMany(
+        { category: id, status: ProductStatus.DISCONTINUED },
+        { $set: { category: null } },
+      );
+    } catch (err) {
+      // If `category` is required on Product schema, this will fail.
+      // In that case we leave orphans alone — they'll still be filtered
+      // out by product list queries because status = DISCONTINUED.
+      logger.warn(
+        `Could not detach discontinued products from category ${id}: ${
+          (err as Error).message
+        }`,
       );
     }
 

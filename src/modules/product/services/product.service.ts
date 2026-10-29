@@ -53,7 +53,7 @@ export interface VariantInput {
   costPrice?: number;
   stock: number;
   lowStockThreshold: number;
-  attributes?: Record<string, string>; // Accept Record from API, Mongoose converts to Map
+  attributes?: Record<string, string>;
   images?: string[];
   weight?: number;
   dimensions?: {
@@ -106,13 +106,12 @@ class ProductService {
   private readonly cacheTTL = 300; // 5 minutes
 
   /**
-   * Find or create category by name or ID - Simplified
+   * Find or create category by name or ID
    */
   private async findOrCreateCategory(
     categoryInput: string,
     tenantId: string,
   ): Promise<Types.ObjectId> {
-    // Check if it's a valid ObjectId first
     if (Types.ObjectId.isValid(categoryInput)) {
       const category = await Category.findById(categoryInput);
       if (category) {
@@ -120,16 +119,13 @@ class ProductService {
       }
     }
 
-    // Treat as category name
     const name = categoryInput.trim();
 
-    // Find existing category by name (case-insensitive)
     let category = await Category.findOne({
       name: { $regex: new RegExp(`^${name}$`, "i") },
       tenantId,
     });
 
-    // Auto-create if not found
     if (!category) {
       try {
         category = await Category.create({
@@ -147,7 +143,6 @@ class ProductService {
           `✅ Auto-created category: ${category.name} (${category._id})`,
         );
       } catch (error: any) {
-        // If slug collision occurs, try to find again (race condition)
         const existingCat = await Category.findOne({
           name: { $regex: new RegExp(`^${name}$`, "i") },
           tenantId,
@@ -169,38 +164,34 @@ class ProductService {
    * Create a new product
    */
   async create(input: CreateProductInput): Promise<IProduct> {
-    // Verify SKU is unique
-    const existingSku = await Product.findOne({ sku: input.sku.toUpperCase() });
+    const existingSku = await Product.findOne({
+      sku: input.sku.toUpperCase(),
+    });
     if (existingSku) {
       throw new ConflictError("SKU already exists");
     }
 
-    // Auto-create/find category from name or ID
     const categoryId = await this.findOrCreateCategory(
       input.category,
       input.tenantId,
     );
 
-    // Prepare product data
     const productData: any = {
       ...input,
       sku: input.sku.toUpperCase(),
       category: categoryId,
       sellerId: new Types.ObjectId(input.sellerId),
-      status: input.status || ProductStatus.ACTIVE, // Default to ACTIVE instead of DRAFT
+      status: input.status || ProductStatus.ACTIVE,
     };
 
-    // Remove subcategory if present
     delete productData.subcategory;
 
     const product = await Product.create(productData);
 
-    // Update category product count
     await Category.findByIdAndUpdate(categoryId, {
       $inc: { productCount: 1 },
     });
 
-    // Create initial inventory movement record for the product
     if (product.totalStock > 0) {
       await InventoryMovement.create({
         productId: product._id,
@@ -215,7 +206,6 @@ class ProductService {
       });
     }
 
-    // Create inventory movement records for each variant if they have stock
     if (product.variants && product.variants.length > 0) {
       const variantMovements = product.variants
         .filter((variant) => variant.stock > 0)
@@ -245,7 +235,6 @@ class ProductService {
    * Get product by ID
    */
   async getById(id: string, includeInactive = false): Promise<IProduct> {
-    // Try cache first
     const cacheKey = `${this.cachePrefix}${id}`;
     const cached = await redis.get<IProduct>(cacheKey);
     if (cached && (includeInactive || cached.status === ProductStatus.ACTIVE)) {
@@ -266,7 +255,6 @@ class ProductService {
       throw new NotFoundError("Product");
     }
 
-    // Cache active products
     if (product.status === ProductStatus.ACTIVE) {
       await redis.set(cacheKey, product.toJSON(), this.cacheTTL);
     }
@@ -313,12 +301,10 @@ class ProductService {
       throw new NotFoundError("Product");
     }
 
-    // Verify ownership or admin
     if (product.sellerId.toString() !== userId) {
       throw new BadRequestError("You do not own this product");
     }
 
-    // Check SKU uniqueness if changed
     if (input.sku && input.sku.toUpperCase() !== product.sku) {
       const existingSku = await Product.findOne({
         sku: input.sku.toUpperCase(),
@@ -329,7 +315,6 @@ class ProductService {
       }
     }
 
-    // Update category count if category changed
     if (
       input.category &&
       product.category &&
@@ -345,10 +330,8 @@ class ProductService {
       ]);
     }
 
-    // Build update object, excluding undefined values
     const updateData: any = {};
 
-    // Handle simple fields (exclude totalStock and variants - they'll be handled separately)
     const fieldsToUpdate = [
       "name",
       "description",
@@ -374,7 +357,6 @@ class ProductService {
       }
     });
 
-    // Handle special fields
     if (input.sku) {
       updateData.sku = input.sku.toUpperCase();
     }
@@ -387,13 +369,11 @@ class ProductService {
       updateData.subcategory = new Types.ObjectId(input.subcategory);
     }
 
-    // Handle variants - assign to product and use save() to trigger pre-save hook
     if (input.variants !== undefined) {
       logger.info(
         `📦 Updating variants. Received ${input.variants.length} variants in request`,
       );
 
-      // Track stock changes for each variant by matching _id
       const variantStockChanges: Array<{
         variantId: Types.ObjectId;
         sku: string;
@@ -402,26 +382,13 @@ class ProductService {
       }> = [];
 
       if (product.variants && product.variants.length > 0) {
-        logger.info(
-          `📦 Product has ${product.variants.length} existing variants`,
-        );
-
         (input.variants as any[]).forEach((inputVariant, idx) => {
-          logger.info(
-            `📦 Processing variant ${idx}: _id=${inputVariant._id}, stock=${inputVariant.stock}, sku=${inputVariant.sku}`,
-          );
-
-          // Match variant by _id if it exists, otherwise skip tracking for new variants
           if (inputVariant._id) {
             const existingVariant = product.variants.find(
               (v) => v._id?.toString() === inputVariant._id.toString(),
             );
 
             if (existingVariant) {
-              logger.info(
-                `✓ Found matching variant ${existingVariant.sku}: previousStock=${existingVariant.stock}, newStock=${inputVariant.stock}`,
-              );
-
               if (
                 inputVariant.stock !== undefined &&
                 inputVariant.stock !== existingVariant.stock
@@ -432,32 +399,14 @@ class ProductService {
                   previousStock: existingVariant.stock,
                   newStock: inputVariant.stock,
                 });
-                logger.info(
-                  `📈 Tracked stock change for ${existingVariant.sku}: ${existingVariant.stock} → ${inputVariant.stock}`,
-                );
-              } else {
-                logger.info(
-                  `⊘ No stock change for ${existingVariant.sku} (stock=${inputVariant.stock}, previous=${existingVariant.stock})`,
-                );
               }
-            } else {
-              logger.warn(
-                `⚠️ No matching variant found for _id: ${inputVariant._id}`,
-              );
             }
-          } else {
-            logger.warn(
-              `⚠️ Variant at index ${idx} has no _id field - skipping inventory tracking`,
-            );
           }
         });
-      } else {
-        logger.info(`⊘ Product has no existing variants`);
       }
 
       product.variants = input.variants as any;
 
-      // Create inventory movements for variant stock changes
       if (variantStockChanges.length > 0) {
         const movements = variantStockChanges.map((change) => {
           const stockDiff = change.newStock - change.previousStock;
@@ -465,10 +414,7 @@ class ProductService {
             productId: product._id,
             variantId: change.variantId,
             sku: change.sku,
-            type:
-              stockDiff > 0
-                ? InventoryMovementType.ADJUSTMENT
-                : InventoryMovementType.ADJUSTMENT,
+            type: InventoryMovementType.ADJUSTMENT,
             quantity: Math.abs(stockDiff),
             previousStock: change.previousStock,
             newStock: change.newStock,
@@ -478,37 +424,21 @@ class ProductService {
           };
         });
         await InventoryMovement.insertMany(movements);
-        logger.info(
-          `✅ Created ${movements.length} inventory movement(s) for variant stock changes:`,
-          movements.map(
-            (m) =>
-              `${m.sku}: qty=${m.quantity}, ${m.previousStock}→${m.newStock}`,
-          ),
-        );
-      } else {
-        logger.info(`No variant stock changes detected`);
       }
     }
 
-    // Handle totalStock - capture previous value for inventory tracking
     let previousTotalStock: number | undefined;
     if (input.totalStock !== undefined) {
-      // Always capture previous stock when totalStock is being updated
       previousTotalStock = product.totalStock;
-      // Only update totalStock directly for products without variants
-      // For products with variants, totalStock is auto-calculated in pre-save hook
       if (!product.variants || product.variants.length === 0) {
         product.totalStock = input.totalStock;
       }
     }
 
-    // Apply other updates
     Object.assign(product, updateData);
 
-    // Use save() instead of findByIdAndUpdate to trigger pre-save hook
     await product.save();
 
-    // Create inventory movement for totalStock change (for products without variants)
     if (
       previousTotalStock !== undefined &&
       input.totalStock !== undefined &&
@@ -519,10 +449,7 @@ class ProductService {
       await InventoryMovement.create({
         productId: product._id,
         sku: product.sku,
-        type:
-          stockDiff > 0
-            ? InventoryMovementType.ADJUSTMENT
-            : InventoryMovementType.ADJUSTMENT,
+        type: InventoryMovementType.ADJUSTMENT,
         quantity: Math.abs(stockDiff),
         previousStock: previousTotalStock,
         newStock: input.totalStock,
@@ -530,17 +457,12 @@ class ProductService {
         createdBy: new Types.ObjectId(userId),
         tenantId: product.tenantId,
       });
-      logger.info(
-        `Created inventory movement for totalStock change: ${previousTotalStock} → ${input.totalStock} (quantity: ${Math.abs(stockDiff)})`,
-      );
     }
 
-    // Reload with populated fields
     const updatedProduct = await Product.findById(id)
       .populate("category", "name slug")
       .populate("subcategory", "name slug");
 
-    // Invalidate cache
     await this.invalidateCache(id, product.slug);
 
     logger.info(`Product updated: ${updatedProduct?.name}`);
@@ -552,7 +474,6 @@ class ProductService {
    */
   async delete(id: string, userId: string): Promise<void> {
     const product = await Product.findById(id);
-    // console.log("Deleting product with ID:", id);
     if (!product) {
       throw new NotFoundError("Product");
     }
@@ -564,12 +485,10 @@ class ProductService {
     product.status = ProductStatus.DISCONTINUED;
     await product.save();
 
-    // Update category count
     await Category.findByIdAndUpdate(product.category, {
       $inc: { productCount: -1 },
     });
 
-    // Invalidate cache
     await this.invalidateCache(id, product.slug);
 
     logger.info(`Product deleted: ${product.name}`);
@@ -577,6 +496,7 @@ class ProductService {
 
   /**
    * Get products with filters and pagination
+   * ✅ FIX: By default excludes DISCONTINUED (soft-deleted) products.
    */
   async getAll(
     filters: ProductFilters,
@@ -592,10 +512,6 @@ class ProductService {
 
     const query = await this.buildFilterQuery(filters);
 
-    // Debug logging
-    console.log("🔍 Product Query Filters:", JSON.stringify(filters, null, 2));
-    console.log("🔍 Built MongoDB Query:", JSON.stringify(query, null, 2));
-
     const sort: Record<string, 1 | -1> = {
       [sortBy]: sortOrder === "asc" ? 1 : -1,
     };
@@ -609,9 +525,6 @@ class ProductService {
         .limit(limit),
       Product.countDocuments(query),
     ]);
-
-    console.log("✅ Found products:", products.length);
-    console.log("✅ Total count:", total);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -630,6 +543,7 @@ class ProductService {
 
   /**
    * Search products
+   * ✅ FIX: Also excludes DISCONTINUED by default.
    */
   async search(
     searchTerm: string,
@@ -685,7 +599,6 @@ class ProductService {
       throw new BadRequestError("You do not own this product");
     }
 
-    // Check SKU uniqueness within product
     const skuExists = product.variants.some(
       (v) => v.sku === variant.sku?.toUpperCase(),
     );
@@ -701,7 +614,6 @@ class ProductService {
     await product.save();
     await this.invalidateCache(productId, product.slug);
 
-    // Create inventory movement record for new variant if it has stock
     const newVariant = product.variants[product.variants.length - 1];
     if (newVariant.stock > 0) {
       await InventoryMovement.create({
@@ -750,19 +662,13 @@ class ProductService {
     const variant = product.variants[variantIndex];
     const previousStock = variant.stock;
 
-    // Update variant fields
     Object.assign(variant, update);
 
-    // Save product (this will trigger pre-save hook to recalculate totalStock)
     await product.save();
 
-    // Create inventory movement if stock was changed
     if (update.stock !== undefined && update.stock !== previousStock) {
       const stockDiff = update.stock - previousStock;
-      const movementType =
-        stockDiff > 0
-          ? InventoryMovementType.ADJUSTMENT
-          : InventoryMovementType.ADJUSTMENT;
+      const movementType = InventoryMovementType.ADJUSTMENT;
 
       await InventoryMovement.create({
         productId: product._id,
@@ -819,7 +725,6 @@ class ProductService {
       variant.stock = newStock;
       sku = variant.sku;
 
-      // Check for low stock alert
       if (newStock <= variant.lowStockThreshold && newStock > 0) {
         await this.createStockAlert(
           productId,
@@ -850,7 +755,6 @@ class ProductService {
 
     await product.save();
 
-    // Record inventory movement
     await InventoryMovement.create({
       productId: product._id,
       variantId: variantId ? new Types.ObjectId(variantId) : undefined,
@@ -924,23 +828,26 @@ class ProductService {
 
   // Private helper methods
 
+  /**
+   * Build filter query.
+   * ✅ FIX: By default exclude DISCONTINUED (soft-deleted) products.
+   */
   private async buildFilterQuery(
     filters: ProductFilters,
   ): Promise<FilterQuery<IProduct>> {
     const query: FilterQuery<IProduct> = {};
 
-    // Only filter by status if explicitly provided
+    // ✅ FIX: Default-এ DISCONTINUED বাদ। Explicit status দিলে সেটাই honor হবে।
     if (filters.status) {
       query.status = filters.status;
+    } else {
+      query.status = { $ne: ProductStatus.DISCONTINUED };
     }
-    // Don't filter by status by default - show all products
 
-    // Handle category - can be ObjectId or name
     if (filters.category) {
       if (Types.ObjectId.isValid(filters.category)) {
         query.category = new Types.ObjectId(filters.category);
       } else {
-        // Lookup by name
         const category = await Category.findOne({
           name: { $regex: new RegExp(`^${filters.category}$`, "i") },
           tenantId: filters.tenantId,
@@ -948,13 +855,11 @@ class ProductService {
         if (category) {
           query.category = category._id;
         } else {
-          // No matching category - return no results
           query._id = new Types.ObjectId("000000000000000000000000");
         }
       }
     }
 
-    // Handle subcategory - can be ObjectId or name
     if (filters.subcategory) {
       if (Types.ObjectId.isValid(filters.subcategory)) {
         query.subcategory = new Types.ObjectId(filters.subcategory);
@@ -1032,7 +937,7 @@ class ProductService {
       case InventoryMovementType.EXPIRED:
         return Math.max(0, currentStock - quantity);
       case InventoryMovementType.ADJUSTMENT:
-        return Math.max(0, currentStock + quantity); // Can be negative for reduction
+        return Math.max(0, currentStock + quantity);
       default:
         return currentStock;
     }
@@ -1047,7 +952,6 @@ class ProductService {
     alertType: "low_stock" | "out_of_stock" | "overstock",
     tenantId: string,
   ): Promise<void> {
-    // Check if unresolved alert already exists
     const existingAlert = await StockAlert.findOne({
       productId,
       variantId,

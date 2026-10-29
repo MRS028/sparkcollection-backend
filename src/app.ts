@@ -17,7 +17,6 @@ import {
 } from "./shared/middleware/rateLimiter.js";
 import { logger } from "./shared/utils/logger.js";
 import { NotFoundError } from "./shared/errors/index.js";
-
 // Route imports
 import { authRoutes } from "./modules/auth/index.js";
 import { userRoutes } from "./modules/user/index.js";
@@ -210,6 +209,9 @@ export function createApp(): Application {
       },
     });
   });
+
+
+  // app.use('/api/v1/uploads', uploadRoutes);
 
   // ==================== 404 Handler ====================
 
